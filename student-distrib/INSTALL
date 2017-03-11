@@ -13,5 +13,5 @@ debug.bat batch script.
 
 If you would like to run MP3 without having to connect gdb (When you are done
 and have removed all your bugs for example), you can duplicate the debug.bat
-batch script and remove the -s and -S options in the QEMU command.  This is 
+batch script and remove the -s and -S options in the QEMU command.  This is
 will stop QEMU from waiting for GDB to connect.
