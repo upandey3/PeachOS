@@ -5,5 +5,6 @@ i8259.o: i8259.c i8259.h types.h lib.h
 kernel.o: kernel.c multiboot.h types.h x86_desc.h lib.h i8259.h debug.h \
   PeachOS_Keyboard.h
 lib.o: lib.c lib.h types.h
+PeachOS_IDT.o: PeachOS_IDT.c lib.h types.h PeachOS_IDT.h x86_desc.h
 PeachOS_Keyboard.o: PeachOS_Keyboard.c PeachOS_Keyboard.h lib.h types.h \
   x86_desc.h i8259.h
