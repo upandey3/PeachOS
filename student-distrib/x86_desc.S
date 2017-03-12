@@ -87,10 +87,14 @@ gdt_bottom:
 
 	.align 16
 
+/* gdt_struct initialized here in
+	order to pass address and size
+	via lgdt instruction to load the
+	GDT */
+
 gdt_struct:
 	.word gdt_bottom - gdt - 1
 	.long gdt
-
 
 ldt:
 	.rept 4
