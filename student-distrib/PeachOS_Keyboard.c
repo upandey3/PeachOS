@@ -190,6 +190,5 @@ void keyboard_key_pressed(uint8_t keyboard_value)
     }
 
     putc(keyboard_ascii);
-
     return;
 }

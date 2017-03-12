@@ -1,7 +1,6 @@
 /* PeachOS_Keyboard.h - Defines for useful keybaord library functions
  * vim:ts=4 noexpandtab
  */
-
 #ifndef KEYBOARD_H
 #define KEYBOARD_H
 

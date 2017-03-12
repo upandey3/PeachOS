@@ -7,6 +7,7 @@
 #include "lib.h"
 #include "i8259.h"
 #include "debug.h"
+#include "PeachOS_Keyboard.h"
 
 /* Macros. */
 /* Check if the bit BIT in FLAGS is set. */
@@ -147,6 +148,9 @@ entry (unsigned long magic, unsigned long addr)
 	/* Init the PIC */
 	i8259_init();
 
+	/* Intialize the keyboard */
+	keyboard_init();
+	sti();
 	/* Initialize devices, memory, filesystem, enable device interrupts on the
 	 * PIC, any other initialization stuff... */
 
@@ -162,4 +166,3 @@ entry (unsigned long magic, unsigned long addr)
 	/* Spin (nicely, so we don't chew up cycles) */
 	asm volatile(".1: hlt; jmp .1;");
 }
-

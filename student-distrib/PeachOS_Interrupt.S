@@ -2,5 +2,5 @@
  * vim:ts=4 noexpandtab
  */
 
-#include "PeachOS_Interrupt.h"
-#include "x86_desc.h"
+//#include "PeachOS_Interrupt.h"
+//#include "x86_desc.h"
