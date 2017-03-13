@@ -7,7 +7,7 @@
 #include "lib.h"
 #include "i8259.h"
 #include "debug.h"
-#include "paging.h"
+#include "PeachOS_PAGING.h"
 #include "PeachOS_Keyboard.h"
 #include "PeachOS_IDT.h"
 #include "PeachOS_Interrupt.h"
