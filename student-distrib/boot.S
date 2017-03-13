@@ -28,13 +28,15 @@ continue:
 	# Load the GDT
 	lgdt 		gdt_struct
 
+	# Call initialize_idt by calling convention
+
 	pushl   %eax
 	pushl 	%edx
 	pushl 	%ecx
 	call  	initialize_idt
-	popl 	%ecx
-	popl 	%edx
-	popl 	%eax
+	popl 		%ecx
+	popl 		%edx
+	popl 		%eax
 
 	# Load CS with the new descriptor value
 	ljmp    $KERNEL_CS, $keep_going

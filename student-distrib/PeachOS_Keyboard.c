@@ -255,6 +255,16 @@ void keyboard_key_pressed(uint8_t keyboard_value)
     }
 }
 
+/*
+ * keyboard_enter_key_pressed
+ *  DESCRIPTION:
+ *          This function takes care of clearing the screen when enter is pressed
+ *
+ *  INPUT: none
+ *
+ *  OUTPUT: none
+ *  SOURCE: Aakash C. Patel
+*/
 void keyboard_enter_key_pressed()
 {
     clear();
