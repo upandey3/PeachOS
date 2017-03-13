@@ -1,14 +1,13 @@
-/* PeachOS_Interrupt.h - Defines for useful interrupt handler library functions
+/* PeachOS_Keyboard.h - Defines for useful keybaord library functions
  * vim:ts=4 noexpandtab
  */
+#ifndef _INTERRUPT_H
+#define _INTERRUPT_H
 
-#ifndef INTERRUPT_HANDLER_H
-#define INTERRUPT_HANDLER_H
+/* Keyboard Handler, going to be used in PeachOS_IDT */
+extern keyboard_handler();
 
-/* RTC handler */
-extern void handler_rtc();
-
-/* Keyboard handler */
-extern void handler_keyboard();
+/* RTC Handle, going to be used in PeachOS_IDT */
+extern void rtc_handler();
 
 #endif

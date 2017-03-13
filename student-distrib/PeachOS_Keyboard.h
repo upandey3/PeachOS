@@ -1,8 +1,8 @@
 /* PeachOS_Keyboard.h - Defines for useful keybaord library functions
  * vim:ts=4 noexpandtab
  */
-#ifndef KEYBOARD_H
-#define KEYBOARD_H
+#ifndef _KEYBOARD_H
+#define _KEYBOARD_H
 
 #include "lib.h"
 #include "x86_desc.h"
@@ -73,7 +73,7 @@ extern void keyboard_backspace_key_pressed();
  *    https://www.daniweb.com/programming/software-development/code/216732/reading-scan-codes-from-the-keyboard
  *    https://www.win.tue.nl/~aeb/linux/kbd/scancodes-1.html
 */
-static uint8_t keyboard_map[TOTAL_CHAR + 1] =
+static uint8_t keyboard_temp[TOTAL_CHAR + 1] =
 {
     /* -- NORMAL KEYS -- NO CAPS -- NO SHIFT -- */
     '\0', '\0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',  '-', '=', '\0',
@@ -102,6 +102,46 @@ static uint8_t keyboard_map[TOTAL_CHAR + 1] =
     '\0', 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L' , ';', '\'', '`', '\0',
     '\\', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', ',', '.', '/', '\0',
     '*', '\0', ' ', '\0'
+};
+
+static uint8_t keyboard_map[CHAR_COUNT] =
+{
+    /* -- NORMAL KEYS -- NO CAPS -- NO SHIFT -- */
+    '\0', '\0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',  '-', '=', '\0',
+    '\0', 'q',  'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[',  ']', '\0',
+    '\0', 'a',  's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', '`', '\0',
+    '\\', 'z',  'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', '\0',
+    '*',  '\0', ' ', '\0'
+};
+
+static uint8_t keyboard_map_S_NC[CHAR_COUNT] =
+{
+    /* -- SHIFT -- NO CAPS LOCK -- OFFSET: 59 -- */
+	'\0', '\0', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', '\0',
+    '\0', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', '\0',
+    '\0', 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L' , ':', '"', '~', '\0',
+    '|', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '<', '>', '?', '\0',
+    '*', '\0', ' ', '\0'
+};
+
+static uint8_t keyboard_map_S_C[CHAR_COUNT] =
+{
+    /* -- SHIFT -- CAPS  -- OFFSET: 118 -- */
+   '\0', '\0', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', '\0',
+   '\0', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '{', '}', '\0',
+   '\0', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l' , ':', '"', '~', '\0',
+   '\\', 'z', 'x', 'c', 'v', 'b', 'n', 'm', '<', '>', '?', '\0',
+   '*', '\0', ' ', '\0'
+};
+
+static uint8_t keyboard_map_NS_C[CHAR_COUNT] =
+{
+    /* -- CAPS -- NO SHIFT -- OFFSET: 177 -- */
+   '\0', '\0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '\0',
+   '\0', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '[', ']', '\0',
+   '\0', 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L' , ';', '\'', '`', '\0',
+   '\\', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', ',', '.', '/', '\0',
+   '*', '\0', ' ', '\0'
 };
 
 

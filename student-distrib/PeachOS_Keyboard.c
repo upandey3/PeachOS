@@ -1,7 +1,10 @@
+
+
 /* PeachOS_Keybaord.c - Uses useful keyboard library functions
  * vim:ts=4 noexpandtab
  */
 #include "PeachOS_Keyboard.h"
+#include "lib.h"
 
 /* Global variable to detect if shift is pressed or not. 1 = PRESSED, 0 = NOT_PRESSED */
 static int SHIFT_PRESSED = UNPRESSED;
@@ -100,6 +103,7 @@ void keyboard_input_handler()
             break;
         case L_CTRL_UNPRESSED:
             CTRL_PRESSED = UNPRESSED;
+            break;
 
         /* If ALT Pressed then turn on the ALT_PRESSED int variable */
         case ALT_PRESSED :
@@ -107,6 +111,7 @@ void keyboard_input_handler()
             break;
         case ALT_UNPRESSED:
             ALT_PRESSED_1 = UNPRESSED;
+            break;
 
         /* Special cases for BACKSPACE KEY */
         case BACKSPACE:
@@ -116,7 +121,7 @@ void keyboard_input_handler()
 
         /* Special case for ENTER_KEY */
         case ENTER_KEY:
-            //keyboard_enter_key_pressed();
+            keyboard_enter_key_pressed();
             break;
 
         /* SKELTON CODE IN-CASE WE DO SOME SPECIAL FUNCTIONS */
@@ -154,41 +159,59 @@ void keyboard_input_handler()
 */
 void keyboard_key_pressed(uint8_t keyboard_value)
 {
-    uint8_t keyboard_ascii;
+    cli();
 /*
-*                             NORMAL_KEYS        0
-*                             SHIFT_NO_CAPS      59
-*                             SHIFT_CAPS         118
-*                             NO_SHIFT_CAPS      177
+*   keyboard_map                         NORMAL_KEYS        0
+*   keyboard_map_S_NC                    SHIFT_NO_CAPS      59
+*   keyboard_map_S_C                     SHIFT_CAPS         118
+*   keyboard_map_NS_C                    NO_SHIFT_CAPS      177
 */
     /* First sure make it's within our bounds of 59 * 4 */
-    if(keyboard_value > TOTAL_CHAR)
-        return;
-
-    /* -- CHECK FOR SHIFT and CAPS -- */
-    if(SHIFT_PRESSED || CAPS_PRESSED)
+    if(keyboard_value > CHAR_COUNT)
     {
-        /* We know either of them were pressed, now we narrow it down */
-        if(SHIFT_PRESSED && !CAPS_PRESSED) // if SHIFT was pressed but not CAPS
-        {
-            keyboard_ascii = keyboard_map[keyboard_value + SHIFT_NO_CAPS];
-        }
-
-        else if(SHIFT_PRESSED && CAPS_PRESSED) // if SHIFT was presses and CAPS was pressed
-        {
-            keyboard_ascii = keyboard_map[keyboard_value + SHIFT_CAPS];
-        }
-
-        else if(!SHIFT_PRESSED && CAPS_PRESSED) // if SHIFT was not pressed and CAPS was pressed
-        {
-            keyboard_ascii = keyboard_map[keyboard_value + NO_SHIFT_CAPS];
-        }
-        else
-        {
-            keyboard_ascii = keyboard_map[keyboard_value + NORMAL_KEYS];
-        }
+        sti();
+        return;
     }
 
-    putc(keyboard_ascii);
+    /* -- CHECK FOR SHIFT and CAPS -- */
+    if(SHIFT_PRESSED && CAPS_PRESSED)
+    {
+        uint8_t keyboard_ascii;
+        keyboard_ascii = keyboard_map_S_C[keyboard_value];
+        putc(keyboard_ascii);//putc(keyboard_ascii);
+        sti();
+        return;
+    }
+    /* -- CHECK FOR SHIFT and NOT CAPS -- */
+    else if((SHIFT_PRESSED) && (!CAPS_PRESSED))
+    {
+        uint8_t keyboard_ascii;
+        keyboard_ascii = keyboard_map_S_NC[keyboard_value];
+        putc(keyboard_ascii);//putc(keyboard_ascii);
+        sti();
+        return;
+    }
+    /* -- CHECK FOR NOT SHIFT and CAPS -- */
+    else if((!SHIFT_PRESSED) && (CAPS_PRESSED))
+    {
+        uint8_t keyboard_ascii;
+        keyboard_ascii = keyboard_map_NS_C[keyboard_value];
+        putc(keyboard_ascii);//putc(keyboard_ascii);
+        sti();
+        return;
+    }
+    else
+    {
+        uint8_t keyboard_ascii;
+        keyboard_ascii = keyboard_map[keyboard_value];
+        putc(keyboard_ascii);//putc(keyboard_ascii);
+        sti();
+        return;
+    }
+}
+
+void keyboard_enter_key_pressed()
+{
+    clear();
     return;
 }

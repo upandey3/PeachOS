@@ -1,25 +1,20 @@
 #include "lib.h"
 #include "PeachOS_IDT.h"
 #include "x86_desc.h"
+#include "PeachOS_RTC.h"
+
+#include "PeachOS_Keyboard.h"
+#include "PeachOS_Interrupt.h"
 
 void initialize_idt();
-
-/*
-void undefined_interrupt(void);
-
-void undefined_interrupt(void)
-{
-  cli();
-  printf("%s\n", "Interrupt not defined by our OS!");
-  sti();
-}
-*/
 
 #define INTERRUPT_HANDLER(interrupt_name, string) \
 void interrupt_name () { \
   printf("%s\n", #string); \
   while(1); \
 }
+
+#define RTC_HANDLER()
 
 INTERRUPT_HANDLER (DIVIDE_BY_ZERO, "DIVIDE BY ZERO");
 INTERRUPT_HANDLER (DEBUG, "DEBUG");
@@ -41,6 +36,12 @@ INTERRUPT_HANDLER (ALIGNMENT_CHECK, "ALIGNMENT CHECK");
 INTERRUPT_HANDLER (MACHINE_CHECK, "MACHINE CHECK");
 INTERRUPT_HANDLER (SIMD_FLOATING_POINT_EXCEPTION, "SIMD FLOATING POINT EXCEPTION");
 INTERRUPT_HANDLER (UNDEFINED_INTERRUPT, "Interrupt not defined by our OS!");
+INTERRUPT_HANDLER (SYSTEM_CALL, "System Call Generated!");
+
+/* Set to 0 1 1 0 0 (call gate) simply allows privilege transfer from lower to higher */
+
+/* Set to 0 1 1 1 0 (32 bit interrupt gate) handles hardware, user-defined interrupts and system calls
+   so that these interrupts/system calls are automatically disabled by clearing IF */
 
 void initialize_idt () {
 
@@ -50,7 +51,7 @@ void initialize_idt () {
   {
     idt[i].seg_selector = KERNEL_CS;
     idt[i].reserved4 = 0x0;
-    idt[i].reserved3 = 0x1;
+    idt[i].reserved3 = 0x0;
     idt[i].reserved2 = 0x1;
     idt[i].reserved1 = 0x1;
     idt[i].size = 0x1;
@@ -60,12 +61,13 @@ void initialize_idt () {
 
     if (i > PIC_INT)
     {
-      idt[i].reserved3 = 0x0;
+      idt[i].reserved3 = 0x1;
       SET_IDT_ENTRY(idt[i], UNDEFINED_INTERRUPT);
     }
 
     if (i == SYS_CAL)
     {
+      idt[i].reserved3 = 0x1;
       idt[i].dpl = 0x3;
     }
   }
@@ -89,15 +91,9 @@ void initialize_idt () {
   SET_IDT_ENTRY (idt[16], ALIGNMENT_CHECK);
   SET_IDT_ENTRY (idt[17], MACHINE_CHECK);
   SET_IDT_ENTRY (idt[18], SIMD_FLOATING_POINT_EXCEPTION);
-  SET_IDT_ENTRY (idt[RTC_INT], test_interrupts());
-
-  /*
-
-  SET_IDT_ENTRY (idt[SYS_CAL], sys_call_handler());
-  SET_IDT_ENTRY (idt[KBD_INT], keyboard_handler());
-  SET_IDT_ENTRY (idt[PIC_INT], pic_handler());
-
-  */
+  SET_IDT_ENTRY (idt[SYS_CAL], SYSTEM_CALL);
+  SET_IDT_ENTRY (idt[RTC_INT], rtc_handler);
+  SET_IDT_ENTRY (idt[KBD_INT], keyboard_handler);
 
   lidt(idt_desc_ptr);
 

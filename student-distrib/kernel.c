@@ -8,6 +8,9 @@
 #include "i8259.h"
 #include "debug.h"
 #include "PeachOS_Keyboard.h"
+#include "PeachOS_IDT.h"
+#include "PeachOS_Interrupt.h"
+#include "PeachOS_RTC.h"
 
 /* Macros. */
 /* Check if the bit BIT in FLAGS is set. */
@@ -148,9 +151,11 @@ entry (unsigned long magic, unsigned long addr)
 	/* Init the PIC */
 	i8259_init();
 
+	/* Initialize the RTC */
+	rtc_init();
+
 	/* Intialize the keyboard */
 	keyboard_init();
-	sti();
 	/* Initialize devices, memory, filesystem, enable device interrupts on the
 	 * PIC, any other initialization stuff... */
 
@@ -158,8 +163,9 @@ entry (unsigned long magic, unsigned long addr)
 	/* Do not enable the following until after you have set up your
 	 * IDT correctly otherwise QEMU will triple fault and simple close
 	 * without showing you any output */
-	/*printf("Enabling Interrupts\n");
-	sti();*/
+	printf("Enabling Interrupts\n");
+	sti();
+
 
 	/* Execute the first program (`shell') ... */
 

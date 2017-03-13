@@ -5,6 +5,7 @@
 
 #include "multiboot.h"
 #include "x86_desc.h"
+#include "PeachOS_IDT.h"
 
 .text
 
@@ -26,6 +27,14 @@ _start:
 continue:
 	# Load the GDT
 	lgdt 		gdt_struct
+
+	pushl   %eax
+	pushl 	%edx
+	pushl 	%ecx
+	call  	initialize_idt
+	popl 	%ecx
+	popl 	%edx
+	popl 	%eax
 
 	# Load CS with the new descriptor value
 	ljmp    $KERNEL_CS, $keep_going
