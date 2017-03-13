@@ -106,12 +106,12 @@ void keyboard_input_handler()
      * Getting the input from KEYBOARD_DATA_REGISTER
      * Using Polling to get the input
     */
-    while(1)
+
+    if((inb(KEYBOARD_CONTROL_REGISTER)&0x01)==1)
     {
         scan_input = inb(KEYBOARD_DATA_REGISTER);
-        if((scan_input != 0) && (scan_input > 0))
-            break;
-    }
+    } 
+    else return;
 
     /*
      * As of now, scan_input contains some HEX value...

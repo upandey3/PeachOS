@@ -156,7 +156,7 @@ entry (unsigned long magic, unsigned long addr)
 	//rtc_init();
 
 	/* Intialize the keyboard */
-	//keyboard_init();
+	keyboard_init();
 
 	/* Initialize devices, memory, filesystem, enable device interrupts on the
 	 * PIC, any other initialization stuff... */
@@ -166,10 +166,10 @@ entry (unsigned long magic, unsigned long addr)
 	/* Do not enable the following until after you have set up your
 	 * IDT correctly otherwise QEMU will triple fault and simple close
 	 * without showing you any output */
-	/*
+	/**/
 	printf("Enabling Interrupts\n");
 	sti();
-	*/
+	
 
 	/* Execute the first program (`shell') ... */
 
