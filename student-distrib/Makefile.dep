@@ -3,8 +3,10 @@ PeachOS_Interrupt.o: PeachOS_Interrupt.S x86_desc.h types.h
 x86_desc.o: x86_desc.S x86_desc.h types.h
 i8259.o: i8259.c i8259.h types.h lib.h
 kernel.o: kernel.c multiboot.h types.h x86_desc.h lib.h i8259.h debug.h \
-  PeachOS_Keyboard.h PeachOS_IDT.h PeachOS_Interrupt.h PeachOS_RTC.h
+  paging.h PeachOS_Keyboard.h PeachOS_IDT.h PeachOS_Interrupt.h \
+  PeachOS_RTC.h
 lib.o: lib.c lib.h types.h
+paging.o: paging.c types.h paging.h
 PeachOS_IDT.o: PeachOS_IDT.c lib.h types.h PeachOS_IDT.h x86_desc.h \
   PeachOS_RTC.h PeachOS_Keyboard.h i8259.h PeachOS_Interrupt.h
 PeachOS_Keyboard.o: PeachOS_Keyboard.c PeachOS_Keyboard.h lib.h types.h \
