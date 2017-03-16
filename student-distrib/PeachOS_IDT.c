@@ -52,6 +52,15 @@ INTERRUPT_HANDLER (SYSTEM_CALL, "System Call Generated!");
 /* Set to 0 1 1 1 0 (32 bit interrupt gate) handles hardware, user-defined interrupts and system calls
    so that these interrupts/system calls are automatically disabled by clearing IF */
 
+/*
+* void initialize_idt ();
+*   Inputs: none
+*   Return Value: none
+*	  Function: initializes the IDT by setting the required bits for each
+*   entry in the array (IDT) as per interrupt gates, for SYSTEM_CALL set the
+*   dpl bit to 3 instead of 0
+*/
+
 void initialize_idt () {
 
   int i;                                                                        // loop counter declared
