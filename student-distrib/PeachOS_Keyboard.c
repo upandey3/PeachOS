@@ -4,7 +4,11 @@
  * vim:ts=4 noexpandtab
  */
 #include "PeachOS_Keyboard.h"
+#include "PeachOS_Interrupt.h"
+#include "PeachOS_RTC.h"
 #include "lib.h"
+
+#define LIMIT 128
 
 /* The following array is taken from
  *    http://www.osdever.net/bkerndev/Docs/keyboard.htm;
@@ -63,6 +67,12 @@ static int CTRL_PRESSED = UNPRESSED;
 /* ALT Button Pressed is ON or OFF */
 static int ALT_PRESSED_1 = UNPRESSED;
 
+/* BUFFER TO HOLD VALUES */
+static uint8_t buffer[128];
+static int index = 0; //index for the array
+
+void empty_buffer(uint8_t* buffer);
+
 /*
  * keyboard_init
  *  DESCRIPTION:
@@ -106,11 +116,10 @@ void keyboard_input_handler()
      * Getting the input from KEYBOARD_DATA_REGISTER
      * Using Polling to get the input
     */
-
-    if((inb(KEYBOARD_CONTROL_REGISTER)&0x01)==1)
+    if((inb(KEYBOARD_CONTROL_REGISTER) & 0x01) == 1)
     {
         scan_input = inb(KEYBOARD_DATA_REGISTER);
-    } 
+    }
     else return;
 
     /*
@@ -139,7 +148,7 @@ void keyboard_input_handler()
 
         /* CAPS LOCK will be pressed once to Turn ON, and once again to turn OFF */
         case CAPS_LOCK:
-            CAPS_PRESSED = UNPRESSED;
+            CAPS_PRESSED = !CAPS_PRESSED;
             break;
 
         /* If CTRL Pressed then turn on the CRTL_PRESSED int variable */
@@ -160,8 +169,7 @@ void keyboard_input_handler()
 
         /* Special cases for BACKSPACE KEY */
         case BACKSPACE:
-            // DO SOMETHING
-            //keyboard_backspace_key_pressed();
+            keyboard_backspace_key_pressed();
             break;
 
         /* Special case for ENTER_KEY */
@@ -204,7 +212,7 @@ void keyboard_input_handler()
 */
 void keyboard_key_pressed(uint8_t keyboard_value)
 {
-    cli();
+    //cli();
 /*
 *   keyboard_map                         NORMAL_KEYS        0
 *   keyboard_map_S_NC                    SHIFT_NO_CAPS      59
@@ -214,7 +222,49 @@ void keyboard_key_pressed(uint8_t keyboard_value)
     /* First sure make it's within our bounds of 59 * 4 */
     if(keyboard_value > CHAR_COUNT)
     {
-        sti();
+        return;
+    }
+
+    /* -- CHECK FOR CTRL -- */
+    if(CTRL_PRESSED)
+    {
+        uint8_t keyboard_ascii;
+        keyboard_ascii = keyboard_map[keyboard_value];
+        if(keyboard_ascii == 'l')
+        {
+            clear_screen();
+            empty_buffer(buffer); // ADDED
+        }
+        if(keyboard_ascii == '1')
+        {
+            clear_screen();
+            // List All Files
+            printf("List All Files");
+        }
+        if(keyboard_ascii == '2')
+        {
+            clear_screen();
+            // Read File by Name
+            printf("Read All Files");
+        }
+        if(keyboard_ascii == '3')
+        {
+            clear_screen();
+            // Read File by Index
+            printf("Read File By Index");
+        }
+        if(keyboard_ascii == '4')
+        {
+            clear_screen();
+            // Start RTC Test
+            printf("Start RTC Test");
+        }
+        if(keyboard_ascii == '5')
+        {
+            clear_screen();
+            // Stop RTC Test
+            printf("Stop RTC Test");
+        }
         return;
     }
 
@@ -223,8 +273,14 @@ void keyboard_key_pressed(uint8_t keyboard_value)
     {
         uint8_t keyboard_ascii;
         keyboard_ascii = keyboard_map_S_C[keyboard_value];
-        putc(keyboard_ascii);//putc(keyboard_ascii);
-        sti();
+        // putc(keyboard_ascii);
+        // INSTEAD
+        buffer[index] = keyboard_ascii; // put the value into the buffer
+        index++;
+        // if index reaches more than 128 limit then empty out the buffer
+        printf("%c", buffer[index-1]);
+        if(index > LIMIT)
+            empty_buffer(buffer);
         return;
     }
     /* -- CHECK FOR SHIFT and NOT CAPS -- */
@@ -232,8 +288,14 @@ void keyboard_key_pressed(uint8_t keyboard_value)
     {
         uint8_t keyboard_ascii;
         keyboard_ascii = keyboard_map_S_NC[keyboard_value];
-        putc(keyboard_ascii);//putc(keyboard_ascii);
-        sti();
+        // putc(keyboard_ascii);
+        // INSTEAD
+        buffer[index] = keyboard_ascii; // put the value into the buffer
+        index++;
+        printf("%c", buffer[index-1]);
+        // if index reaches more than 128 limit then empty out the buffer
+        if(index > LIMIT)
+            empty_buffer(buffer);
         return;
     }
     /* -- CHECK FOR NOT SHIFT and CAPS -- */
@@ -241,16 +303,28 @@ void keyboard_key_pressed(uint8_t keyboard_value)
     {
         uint8_t keyboard_ascii;
         keyboard_ascii = keyboard_map_NS_C[keyboard_value];
-        putc(keyboard_ascii);//putc(keyboard_ascii);
-        sti();
+        // putc(keyboard_ascii);
+        // INSTEAD
+        buffer[index] = keyboard_ascii; // put the value into the buffer
+        index++;
+        printf("%c", buffer[index-1]);
+        // if index reaches more than 128 limit then empty out the buffer
+        if(index > LIMIT)
+            empty_buffer(buffer);
         return;
     }
     else
     {
         uint8_t keyboard_ascii;
         keyboard_ascii = keyboard_map[keyboard_value];
-        putc(keyboard_ascii);//putc(keyboard_ascii);
-        sti();
+        // putc(keyboard_ascii);
+        // INSTEAD
+        buffer[index] = keyboard_ascii; // put the value into the buffer
+        index++;
+        printf("%c", buffer[index-1]);
+        // if index reaches more than 128 limit then empty out the buffer
+        if(index > LIMIT)
+            empty_buffer(buffer);
         return;
     }
 }
@@ -258,7 +332,7 @@ void keyboard_key_pressed(uint8_t keyboard_value)
 /*
  * keyboard_enter_key_pressed
  *  DESCRIPTION:
- *          This function takes care of clearing the screen when enter is pressed
+ *          This function takes care scrolling and going to a new line
  *
  *  INPUT: none
  *
@@ -267,6 +341,45 @@ void keyboard_key_pressed(uint8_t keyboard_value)
 */
 void keyboard_enter_key_pressed()
 {
-    clear();
+    newline_screen();
+    return;
+}
+
+/*
+ * keyboard_backspace_key_pressed
+ *  DESCRIPTION:
+ *          This function takes care of clearing the last displayed char
+ *
+ *  INPUT: none
+ *
+ *  OUTPUT: none
+ *  SOURCE: Aakash C. Patel
+*/
+keyboard_backspace_key_pressed()
+{
+    backspace_screen();
+    buffer[index-1] = '\0';
+    index = index - 1;
+    return;
+}
+
+/*
+ * empty_buffer
+ *  DESCRIPTION:
+ *          This function takes care of clearing out the array after we fill it all
+ *
+ *  INPUT: uint8_t buffer of values
+ *
+ *  OUTPUT: none
+ *  SOURCE: Aakash C. Patel
+*/
+void empty_buffer(uint8_t* buffer)
+{
+    int i = 0;
+    for(i = 0; i < index; i++)
+    {
+        buffer[i] = '\0';
+    }
+    index = 0;
     return;
 }

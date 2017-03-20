@@ -6,7 +6,7 @@
 #define VIDEO 0xB8000
 #define NUM_COLS 80
 #define NUM_ROWS 25
-#define ATTRIB 0x1F
+#define ATTRIB 0xCF
 
 static int screen_x;
 static int screen_y;
@@ -27,6 +27,68 @@ clear(void)
         *(uint8_t *)(video_mem + (i << 1)) = ' ';
         *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB;
     }
+}
+
+/*
+* clear_screen(void);
+*   Inputs: void
+*   Return Value: none
+*	Function: Clears video memory
+*/
+void
+clear_screen(void)
+{
+    int32_t i;
+    for(i=0; i<NUM_ROWS*NUM_COLS; i++) {
+        *(uint8_t *)(video_mem + (i << 1)) = ' ';
+        *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB;
+    }
+    screen_y = 0;
+    screen_x = 0;
+}
+
+/*
+* newline_screen(void);
+*   Inputs: void
+*   Return Value: none
+*	Function: Clears video memory
+*/
+void
+newline_screen(void)
+{
+    if(screen_y == NUM_ROWS -1)
+    {
+        int32_t i;
+        for(i=0; i<(NUM_ROWS-1)*NUM_COLS; i++) {
+            *(uint8_t *)(video_mem + (i << 1)) = *(uint8_t *)(video_mem + (i+NUM_COLS << 1));
+            *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB;
+        }
+        for(i = (NUM_ROWS-1)*NUM_COLS; i < (NUM_ROWS)*NUM_COLS; i++)
+        {
+            *(uint8_t *)(video_mem + (i << 1)) = ' ';
+            *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB;
+        }
+        screen_x = 0;
+    }
+    else
+    {
+        screen_x = 0;
+        screen_y++;
+    }
+}
+
+/*
+* backspace_screen(void);
+*   Inputs: void
+*   Return Value: none
+*	Function: Clears video memory
+*/
+void
+backspace_screen(void)
+{
+    screen_x--;
+    *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1) + 1) = ATTRIB;
+    *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1)) = ' ';
 }
 
 /* Standard printf().
@@ -187,14 +249,20 @@ puts(int8_t* s)
 void
 putc(uint8_t c)
 {
-    if(c == '\n' || c == '\r') {
+    if(c == '\n' || c == '\r')
+    {
         screen_y++;
         screen_x=0;
-    } else {
+    }
+    else
+    {
         *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1)) = c;
         *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1) + 1) = ATTRIB;
         screen_x++;
-        screen_x %= NUM_COLS;
+        if(screen_x == NUM_COLS)
+        {
+            newline_screen();
+        }
         screen_y = (screen_y + (screen_x / NUM_COLS)) % NUM_ROWS;
     }
 }
@@ -561,8 +629,9 @@ strncpy(int8_t* dest, const int8_t* src, uint32_t n)
 void
 test_interrupts(void)
 {
-	int32_t i;
-	for (i=0; i < NUM_ROWS*NUM_COLS; i++) {
-		video_mem[i<<1]++;
+	uint8_t i;
+	for (i=0; i < NUM_ROWS*NUM_COLS; i++)
+    {
+		video_mem[i<<1] = '1';
 	}
 }

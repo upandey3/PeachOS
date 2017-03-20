@@ -67,4 +67,7 @@ extern void keyboard_enter_key_pressed();
 /* Special case for backspace key */
 extern void keyboard_backspace_key_pressed();
 
+/* Clear out the buffer */
+void empty_buffer(uint8_t* buffer);
+
 #endif
