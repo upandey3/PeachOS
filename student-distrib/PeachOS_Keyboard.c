@@ -8,7 +8,11 @@
 #include "PeachOS_RTC.h"
 #include "lib.h"
 
-#define LIMIT 128
+// #define LIMIT 128
+//
+// /* BUFFER TO HOLD VALUES */
+// static uint8_t keyboard_buffer[128];
+// static int index = 0; //index for the array
 
 /* The following array is taken from
  *    http://www.osdever.net/bkerndev/Docs/keyboard.htm;
@@ -66,12 +70,6 @@ static int CTRL_PRESSED = UNPRESSED;
 
 /* ALT Button Pressed is ON or OFF */
 static int ALT_PRESSED_1 = UNPRESSED;
-
-/* BUFFER TO HOLD VALUES */
-static uint8_t buffer[128];
-static int index = 0; //index for the array
-
-void empty_buffer(uint8_t* buffer);
 
 /*
  * keyboard_init
@@ -233,7 +231,7 @@ void keyboard_key_pressed(uint8_t keyboard_value)
         if(keyboard_ascii == 'l')
         {
             clear_screen();
-            empty_buffer(buffer); // ADDED
+            empty_buffer(keyboard_buffer); // ADDED
         }
         if(keyboard_ascii == '1')
         {
@@ -275,12 +273,12 @@ void keyboard_key_pressed(uint8_t keyboard_value)
         keyboard_ascii = keyboard_map_S_C[keyboard_value];
         // putc(keyboard_ascii);
         // INSTEAD
-        buffer[index] = keyboard_ascii; // put the value into the buffer
+        keyboard_buffer[index] = keyboard_ascii; // put the value into the buffer
         index++;
         // if index reaches more than 128 limit then empty out the buffer
-        printf("%c", buffer[index-1]);
+        printf("%c", keyboard_buffer[index-1]);
         if(index > LIMIT)
-            empty_buffer(buffer);
+            empty_buffer(keyboard_buffer);
         return;
     }
     /* -- CHECK FOR SHIFT and NOT CAPS -- */
@@ -290,12 +288,12 @@ void keyboard_key_pressed(uint8_t keyboard_value)
         keyboard_ascii = keyboard_map_S_NC[keyboard_value];
         // putc(keyboard_ascii);
         // INSTEAD
-        buffer[index] = keyboard_ascii; // put the value into the buffer
+        keyboard_buffer[index] = keyboard_ascii; // put the value into the buffer
         index++;
-        printf("%c", buffer[index-1]);
+        printf("%c", keyboard_buffer[index-1]);
         // if index reaches more than 128 limit then empty out the buffer
         if(index > LIMIT)
-            empty_buffer(buffer);
+            empty_buffer(keyboard_buffer);
         return;
     }
     /* -- CHECK FOR NOT SHIFT and CAPS -- */
@@ -305,12 +303,12 @@ void keyboard_key_pressed(uint8_t keyboard_value)
         keyboard_ascii = keyboard_map_NS_C[keyboard_value];
         // putc(keyboard_ascii);
         // INSTEAD
-        buffer[index] = keyboard_ascii; // put the value into the buffer
+        keyboard_buffer[index] = keyboard_ascii; // put the value into the buffer
         index++;
-        printf("%c", buffer[index-1]);
+        printf("%c", keyboard_buffer[index-1]);
         // if index reaches more than 128 limit then empty out the buffer
         if(index > LIMIT)
-            empty_buffer(buffer);
+            empty_buffer(keyboard_buffer);
         return;
     }
     else
@@ -319,12 +317,12 @@ void keyboard_key_pressed(uint8_t keyboard_value)
         keyboard_ascii = keyboard_map[keyboard_value];
         // putc(keyboard_ascii);
         // INSTEAD
-        buffer[index] = keyboard_ascii; // put the value into the buffer
+        keyboard_buffer[index] = keyboard_ascii; // put the value into the buffer
         index++;
-        printf("%c", buffer[index-1]);
+        printf("%c", keyboard_buffer[index-1]);
         // if index reaches more than 128 limit then empty out the buffer
         if(index > LIMIT)
-            empty_buffer(buffer);
+            empty_buffer(keyboard_buffer);
         return;
     }
 }
@@ -341,6 +339,8 @@ void keyboard_key_pressed(uint8_t keyboard_value)
 */
 void keyboard_enter_key_pressed()
 {
+    keyboard_buffer[index] = '\0';
+    index++;
     newline_screen();
     return;
 }
@@ -355,11 +355,14 @@ void keyboard_enter_key_pressed()
  *  OUTPUT: none
  *  SOURCE: Aakash C. Patel
 */
+void
 keyboard_backspace_key_pressed()
 {
     backspace_screen();
-    buffer[index-1] = '\0';
+    keyboard_buffer[index-1] = '\0';
     index = index - 1;
+    if(index < 0)
+        index = 0;
     return;
 }
 
@@ -373,12 +376,12 @@ keyboard_backspace_key_pressed()
  *  OUTPUT: none
  *  SOURCE: Aakash C. Patel
 */
-void empty_buffer(uint8_t* buffer)
+void empty_buffer(uint8_t* keyboard_buffer)
 {
     int i = 0;
     for(i = 0; i < index; i++)
     {
-        buffer[i] = '\0';
+        keyboard_buffer[i] = '\0';
     }
     index = 0;
     return;

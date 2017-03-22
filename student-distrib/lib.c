@@ -3,10 +3,6 @@
  */
 
 #include "lib.h"
-#define VIDEO 0xB8000
-#define NUM_COLS 80
-#define NUM_ROWS 25
-#define ATTRIB 0xCF
 
 static int screen_x;
 static int screen_y;
@@ -86,9 +82,19 @@ newline_screen(void)
 void
 backspace_screen(void)
 {
-    screen_x--;
-    *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1) + 1) = ATTRIB;
-    *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1)) = ' ';
+    if(screen_x)
+    {
+        screen_x--;
+        *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1) + 1) = ATTRIB;
+        *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1)) = ' ';
+    }
+    else
+    {
+        screen_y--;
+        screen_x = NUM_COLS - 1;
+        *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1) + 1) = ATTRIB;
+        *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1)) = ' ';
+    }
 }
 
 /* Standard printf().

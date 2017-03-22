@@ -9,6 +9,12 @@
 #include "types.h"
 #include "i8259.h"
 
+#define LIMIT 128
+
+/* BUFFER TO HOLD VALUES */
+static uint8_t keyboard_buffer[128];
+static int index = 0; //index for the array
+
 /* -- MASTER PIC- IRQ1 IS FOR KEYBOARD --  */
 #define KEYBOARD_IRQ	   1
 
@@ -68,6 +74,6 @@ extern void keyboard_enter_key_pressed();
 extern void keyboard_backspace_key_pressed();
 
 /* Clear out the buffer */
-void empty_buffer(uint8_t* buffer);
+extern void empty_buffer(uint8_t* keyboard_buffer);
 
 #endif
