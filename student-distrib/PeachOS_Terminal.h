@@ -24,7 +24,7 @@ typedef struct terminal_data
     uint32_t terminal_x_pos; // keeping track of screen position
     uint32_t terminal_y_pos;
 
-    uint8_t terminal_video_mem; // use this to put things on the screen
+    char* terminal_video_mem; // use this to put things on the screen
 } terminal_data_t;
 
 static terminal_data_t terminal;

@@ -1,18 +1,8 @@
-
-
 /* PeachOS_Keybaord.c - Uses useful keyboard library functions
  * vim:ts=4 noexpandtab
  */
-#include "PeachOS_Keyboard.h"
-#include "PeachOS_Interrupt.h"
-#include "PeachOS_RTC.h"
-#include "lib.h"
 
-// #define LIMIT 128
-//
-// /* BUFFER TO HOLD VALUES */
-// static uint8_t keyboard_buffer[128];
-// static int index = 0; //index for the array
+#include "PeachOS_Keyboard.h"
 
 /* The following array is taken from
  *    http://www.osdever.net/bkerndev/Docs/keyboard.htm;
@@ -177,6 +167,7 @@ void keyboard_input_handler()
 
         /* SKELTON CODE IN-CASE WE DO SOME SPECIAL FUNCTIONS */
         case F1_PRESSED:
+            terminal_init();
             break;
         case F2_PRESSED:
             break;

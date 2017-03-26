@@ -1,10 +1,11 @@
 #include "PeachOS_Terminal.h"
 
-#define TERMINAL_ATTRIB 0x2F
+#define TERMINAL_ATTRIB 0x02
 #define TERMINAL_VIDEO 0xB8000
 
 #define LIMIT 128
 
+extern uint8_t keyboard_buffer[128];
 /*
  * terminal_open
  *  DESCRIPTION:
@@ -93,7 +94,7 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes)
     uint8_t term_index; // used for indexing
 
     cli(); // critical section, we are reading from the keyboard buffer
-	int8_t *term_buf = (uint8_t *)buf; // both poiting at the same place
+	uint8_t *term_buf = (uint8_t *)buf; // both poiting at the same place
 
 	// for (term_index = 0; (term_index < LIMIT) && (term_index < nbytes-1); term_index++)
     // {
