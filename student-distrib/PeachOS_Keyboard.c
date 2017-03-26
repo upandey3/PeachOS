@@ -177,6 +177,9 @@ void keyboard_input_handler()
 
         /* SKELTON CODE IN-CASE WE DO SOME SPECIAL FUNCTIONS */
         case F1_PRESSED:
+            send_eoi(KEYBOARD_IRQ);
+            sti();
+            terminal_init();
             break;
         case F2_PRESSED:
             break;
