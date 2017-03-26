@@ -12,6 +12,9 @@
 #define NUM_ROWS 25
 #define ATTRIB 0xCF
 
+#define LOW_PORT_VGA 0x03D4
+#define LOW_PORT_VGA_2 0x03D5
+
 
 int32_t printf(int8_t *format, ...);
 void putc(uint8_t c);
@@ -23,7 +26,10 @@ void clear(void);
 void clear_screen(void);
 void newline_screen(void);
 void backspace_screen(void);
+void update_cursor(void);
 void test_interrupts(void);
+int current_x();
+
 
 void* memset(void* s, int32_t c, uint32_t n);
 void* memset_word(void* s, int32_t c, uint32_t n);

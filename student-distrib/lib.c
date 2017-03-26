@@ -97,6 +97,38 @@ backspace_screen(void)
     }
 }
 
+/*
+* update_cursor(row, col);
+*   Inputs: row and col of where we are
+*   Return Value: none
+*	Function: Clears video memory
+*/
+void
+update_cursor(void)
+{
+   uint8_t position = (screen_y * NUM_COLS) + screen_x;
+
+   // cursor LOW port to vga INDEX register
+   outb(0x0F, LOW_PORT_VGA);
+   outb((uint8_t)(position&0xFF), LOW_PORT_VGA_2);
+   // cursor HIGH port to vga INDEX register
+   outb(0x0E, LOW_PORT_VGA);
+   outb((uint8_t)((position>>8)&0xFF), LOW_PORT_VGA_2);
+}
+
+
+/*
+* Current_x;
+*   Inputs: none
+*   Return Value: none
+*	Function: gets current
+*/
+int
+current_x()
+{
+  return screen_x;
+}
+
 /* Standard printf().
  * Only supports the following format strings:
  * %%  - print a literal '%' character

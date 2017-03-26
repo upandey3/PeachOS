@@ -8,9 +8,6 @@
 #include "x86_desc.h"
 #include "types.h"
 #include "i8259.h"
-#include "PeachOS_Interrupt.h"
-#include "PeachOS_RTC.h"
-#include "PeachOS_Terminal.h"
 
 #define LIMIT 128
 

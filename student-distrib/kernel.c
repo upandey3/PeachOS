@@ -153,14 +153,14 @@ entry (unsigned long magic, unsigned long addr)
 	i8259_init();
 
 	/* Initialize the RTC */
-	//rtc_init();
+	rtc_init();
 
 	/* Intialize the keyboard */
 	keyboard_init();
 
 	/* Initialize devices, memory, filesystem, enable device interrupts on the
 	 * PIC, any other initialization stuff... */
-	//paging_init();
+	paging_init();
 	//printf("Enabling Paging\n");
 	/* Enable interrupts */
 	/* Do not enable the following until after you have set up your
