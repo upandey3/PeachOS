@@ -5,7 +5,11 @@
 
 #include "multiboot.h"
 #include "x86_desc.h"
+<<<<<<< HEAD
 #include "PeachOS_IDT.h"
+=======
+#include "idt.h"
+>>>>>>> 94b83f6dd08b9b4eedf9b4a287dfc2ee783a7bb9
 
 .text
 
@@ -28,12 +32,23 @@ continue:
 	# Load the GDT
 	lgdt 		gdt_struct
 
+<<<<<<< HEAD
 	# Call initialize_idt by calling convention
+=======
+	# Load the IDT
+	# by calling initialize_idt
+>>>>>>> 94b83f6dd08b9b4eedf9b4a287dfc2ee783a7bb9
 
 	pushl   %eax
 	pushl 	%edx
 	pushl 	%ecx
+<<<<<<< HEAD
 	call  	initialize_idt
+=======
+
+	call  	initialize_idt
+
+>>>>>>> 94b83f6dd08b9b4eedf9b4a287dfc2ee783a7bb9
 	popl 		%ecx
 	popl 		%edx
 	popl 		%eax
