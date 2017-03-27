@@ -4,8 +4,8 @@
 
 #include "lib.h"
 
-static int screen_x;
-static int screen_y;
+static int screen_x = 0;
+static int screen_y = 0;
 static char* video_mem = (char *)VIDEO;
 
 /*
@@ -41,6 +41,7 @@ clear_screen(void)
     }
     screen_y = 0;
     screen_x = 0;
+    update_cursor();
 }
 
 /*
@@ -82,6 +83,8 @@ newline_screen(void)
 void
 backspace_screen(void)
 {
+    if((screen_x == 0 && screen_y == 0))
+        return;
     if(screen_x)
     {
         screen_x--;
@@ -95,6 +98,7 @@ backspace_screen(void)
         *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1) + 1) = ATTRIB;
         *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1)) = ' ';
     }
+    update_cursor();
 }
 
 /*
@@ -106,7 +110,7 @@ backspace_screen(void)
 void
 update_cursor(void)
 {
-   uint8_t position = (screen_y * NUM_COLS) + screen_x;
+   uint32_t position = (screen_y * NUM_COLS) + screen_x;// + 1;
 
    // cursor LOW port to vga INDEX register
    outb(0x0F, LOW_PORT_VGA);
@@ -153,6 +157,7 @@ printf(int8_t *format, ...)
 	/* Pointer to the format string */
 	int8_t* buf = format;
 
+    update_cursor();
 	/* Stack pointer for the other parameters */
 	int32_t* esp = (void *)&format;
 	esp++;
@@ -287,10 +292,11 @@ puts(int8_t* s)
 void
 putc(uint8_t c)
 {
+    update_cursor();
     if(c == '\n' || c == '\r')
     {
-        screen_y++;
-        screen_x=0;
+        newline_screen();
+        update_cursor();
     }
     else
     {
@@ -300,9 +306,11 @@ putc(uint8_t c)
         if(screen_x == NUM_COLS)
         {
             newline_screen();
+            update_cursor();
         }
         screen_y = (screen_y + (screen_x / NUM_COLS)) % NUM_ROWS;
     }
+    update_cursor();
 }
 
 /*

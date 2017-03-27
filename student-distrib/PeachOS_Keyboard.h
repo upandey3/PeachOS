@@ -8,12 +8,19 @@
 #include "x86_desc.h"
 #include "types.h"
 #include "i8259.h"
+#include "PeachOS_Interrupt.h"
+#include "PeachOS_RTC.h"
+#include "PeachOS_Terminal.h"
 
 #define LIMIT 128
 
 /* BUFFER TO HOLD VALUES */
-static uint8_t keyboard_buffer[128];
-static int index = 0; //index for the array
+uint8_t keyboard_buffer[LIMIT];
+uint32_t keyboard_index; //index for the array
+
+volatile uint32_t janky_spinlock_flag;
+volatile uint32_t buffer_limit_flag;
+uint32_t terminal_flag_keyboard;
 
 /* -- MASTER PIC- IRQ1 IS FOR KEYBOARD --  */
 #define KEYBOARD_IRQ	   1
@@ -74,6 +81,12 @@ extern void keyboard_enter_key_pressed();
 extern void keyboard_backspace_key_pressed();
 
 /* Clear out the buffer */
-extern void empty_buffer(uint8_t* keyboard_buffer);
+void empty_buffer(uint8_t* keyboard_buffer);
+
+/* Terminal function for read */
+// uint32_t terminal_kread(uint8_t* buf, int32_t nbytes);
+
+/* Terminal function for write */
+// uint32_t terminal_kwrite(const uint8_t* buf, int32_t nbytes);
 
 #endif

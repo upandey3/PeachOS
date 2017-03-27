@@ -34,7 +34,6 @@ int rtc_test_flag;
 #define CMOS_PORT		0x71
 #define INDEX_REGISTER_A	0x8A
 #define	INDEX_REGISTER_B	0x8B
-#define INDEX_REGISTER_C  0x0C
 
 /* RTC IRQ on PIC defined here */
 #define RTC_IRQ 8

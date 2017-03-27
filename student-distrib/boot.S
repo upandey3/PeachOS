@@ -30,15 +30,10 @@ continue:
 
 	# Call initialize_idt by calling convention
 
-	# Load the IDT
-	# by calling initialize_idt
-
 	pushl   %eax
 	pushl 	%edx
 	pushl 	%ecx
-
 	call  	initialize_idt
-
 	popl 		%ecx
 	popl 		%edx
 	popl 		%eax

@@ -4,15 +4,6 @@
  * vim:ts=4 noexpandtab
  */
 #include "PeachOS_Keyboard.h"
-#include "PeachOS_Interrupt.h"
-#include "PeachOS_RTC.h"
-#include "lib.h"
-
-// #define LIMIT 128
-//
-// /* BUFFER TO HOLD VALUES */
-// static uint8_t keyboard_buffer[128];
-// static int index = 0; //index for the array
 
 /* The following array is taken from
  *    http://www.osdever.net/bkerndev/Docs/keyboard.htm;
@@ -85,6 +76,10 @@ static int ALT_PRESSED_1 = UNPRESSED;
 void keyboard_init()
 {
     enable_irq(KEYBOARD_IRQ);
+    keyboard_index = 0;
+    janky_spinlock_flag = 0;
+    buffer_limit_flag = 0;
+
     return;
 }
 
@@ -179,7 +174,8 @@ void keyboard_input_handler()
         case F1_PRESSED:
             send_eoi(KEYBOARD_IRQ);
             sti();
-            terminal_init();
+            terminal_test();
+            enable_irq(KEYBOARD_IRQ);
             break;
         case F2_PRESSED:
             break;
@@ -221,7 +217,7 @@ void keyboard_key_pressed(uint8_t keyboard_value)
 *   keyboard_map_NS_C                    NO_SHIFT_CAPS      177
 */
     /* First sure make it's within our bounds of 59 * 4 */
-    if(keyboard_value > CHAR_COUNT)
+    if(keyboard_value > CHAR_COUNT || keyboard_value == 0)
     {
         return;
     }
@@ -280,14 +276,20 @@ void keyboard_key_pressed(uint8_t keyboard_value)
     {
         uint8_t keyboard_ascii;
         keyboard_ascii = keyboard_map_S_C[keyboard_value];
-        // putc(keyboard_ascii);
-        // INSTEAD
-        keyboard_buffer[index] = keyboard_ascii; // put the value into the buffer
-        index++;
-        // if index reaches more than 128 limit then empty out the buffer
-        printf("%c", keyboard_buffer[index-1]);
-        if(index > LIMIT)
-            empty_buffer(keyboard_buffer);
+
+        if(buffer_limit_flag)
+            return;
+        else
+        {
+            putc(keyboard_ascii);
+            if(terminal_flag_keyboard)
+            {
+                keyboard_buffer[keyboard_index] = keyboard_ascii;
+                if(keyboard_index > LIMIT)
+                    buffer_limit_flag = 1;
+                keyboard_index++;
+            }
+        }
         return;
     }
     /* -- CHECK FOR SHIFT and NOT CAPS -- */
@@ -295,14 +297,20 @@ void keyboard_key_pressed(uint8_t keyboard_value)
     {
         uint8_t keyboard_ascii;
         keyboard_ascii = keyboard_map_S_NC[keyboard_value];
-        // putc(keyboard_ascii);
-        // INSTEAD
-        keyboard_buffer[index] = keyboard_ascii; // put the value into the buffer
-        index++;
-        printf("%c", keyboard_buffer[index-1]);
-        // if index reaches more than 128 limit then empty out the buffer
-        if(index > LIMIT)
-            empty_buffer(keyboard_buffer);
+
+        if(buffer_limit_flag)
+            return;
+        else
+        {
+            putc(keyboard_ascii);
+            if(terminal_flag_keyboard)
+            {
+                keyboard_buffer[keyboard_index] = keyboard_ascii;
+                if(keyboard_index > LIMIT)
+                    buffer_limit_flag = 1;
+                keyboard_index++;
+            }
+        }
         return;
     }
     /* -- CHECK FOR NOT SHIFT and CAPS -- */
@@ -310,28 +318,40 @@ void keyboard_key_pressed(uint8_t keyboard_value)
     {
         uint8_t keyboard_ascii;
         keyboard_ascii = keyboard_map_NS_C[keyboard_value];
-        // putc(keyboard_ascii);
-        // INSTEAD
-        keyboard_buffer[index] = keyboard_ascii; // put the value into the buffer
-        index++;
-        printf("%c", keyboard_buffer[index-1]);
-        // if index reaches more than 128 limit then empty out the buffer
-        if(index > LIMIT)
-            empty_buffer(keyboard_buffer);
+
+        if(buffer_limit_flag)
+            return;
+        else
+        {
+            putc(keyboard_ascii);
+            if(terminal_flag_keyboard)
+            {
+                keyboard_buffer[keyboard_index] = keyboard_ascii;
+                if(keyboard_index > LIMIT)
+                    buffer_limit_flag = 1;
+                keyboard_index++;
+            }
+        }
         return;
     }
     else
     {
         uint8_t keyboard_ascii;
         keyboard_ascii = keyboard_map[keyboard_value];
-        // putc(keyboard_ascii);
-        // INSTEAD
-        keyboard_buffer[index] = keyboard_ascii; // put the value into the buffer
-        index++;
-        printf("%c", keyboard_buffer[index-1]);
-        // if index reaches more than 128 limit then empty out the buffer
-        if(index > LIMIT)
-            empty_buffer(keyboard_buffer);
+
+        if(buffer_limit_flag)
+            return;
+        else
+        {
+            putc(keyboard_ascii);
+            if(terminal_flag_keyboard)
+            {
+                keyboard_buffer[keyboard_index] = keyboard_ascii;
+                if(keyboard_index > LIMIT)
+                    buffer_limit_flag = 1;
+                keyboard_index++;
+            }
+        }
         return;
     }
 }
@@ -348,8 +368,12 @@ void keyboard_key_pressed(uint8_t keyboard_value)
 */
 void keyboard_enter_key_pressed()
 {
-    keyboard_buffer[index] = '\0';
-    index++;
+    janky_spinlock_flag = 1; // set to 1 if enter key pressed FOR TERMINAL
+    if(!buffer_limit_flag)
+    {
+        keyboard_buffer[keyboard_index] = '\n'; // CHANGEd
+        keyboard_index++;
+    }
     newline_screen();
     return;
 }
@@ -367,11 +391,19 @@ void keyboard_enter_key_pressed()
 void
 keyboard_backspace_key_pressed()
 {
-    backspace_screen();
-    keyboard_buffer[index-1] = '\0';
-    index = index - 1;
-    if(index < 0)
-        index = 0;
+    if(terminal_flag_keyboard == 1 && keyboard_index == 0)
+        return;
+    else
+    {
+        backspace_screen();
+        if(keyboard_index > 0)
+        {
+            keyboard_buffer[keyboard_index-1] = '\0';
+            keyboard_index--;
+        }
+        if(keyboard_index <= 0)
+            return;
+    }
     return;
 }
 
@@ -388,10 +420,12 @@ keyboard_backspace_key_pressed()
 void empty_buffer(uint8_t* keyboard_buffer)
 {
     int i = 0;
-    for(i = 0; i < index; i++)
+    for(i = 0; i < keyboard_index; i++)
     {
         keyboard_buffer[i] = '\0';
     }
-    index = 0;
+    keyboard_index = 0;
     return;
 }
+
+/* --------------------- TERMINAL --------------------- */

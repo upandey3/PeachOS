@@ -1,11 +1,11 @@
 #include "PeachOS_Terminal.h"
+#include "PeachOS_Keyboard.h"
 
-#define TERMINAL_ATTRIB 0x02
+#define TERMINAL_ATTRIB 0xC0
 #define TERMINAL_VIDEO 0xB8000
 
 #define LIMIT 128
 
-extern uint8_t keyboard_buffer[128];
 /*
  * terminal_open
  *  DESCRIPTION:
@@ -30,12 +30,12 @@ void terminal_init()
     terminal.terminal_x_pos = 0; // intialize them with 0
     terminal.terminal_y_pos = 0;
 
-    terminal.terminal_video_mem = (char *)TERMINAL_VIDEO; // now we access the video memory and clear it out and color it
-    for (i = 0; i < NUM_ROWS*NUM_COLS; i++)
-    {
-        *(uint8_t *)(terminal.terminal_video_mem + (i << 1)) = ' ';
-        *(uint8_t *)(terminal.terminal_video_mem + (i << 1) + 1) = TERMINAL_ATTRIB;
-	}
+    // terminal.terminal_video_mem = (char *)TERMINAL_VIDEO; // now we access the video memory and clear it out and color it
+    // for (i = 0; i < NUM_ROWS*NUM_COLS; i++)
+    // {
+    //     *(uint8_t *)(terminal.terminal_video_mem + (i << 1)) = ' ';
+    //     *(uint8_t *)(terminal.terminal_video_mem + (i << 1) + 1) = TERMINAL_ATTRIB;
+	// }
 }
 
 /*
@@ -91,18 +91,21 @@ int32_t terminal_close(int32_t fd)
 */
 int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes)
 {
-    uint8_t term_index; // used for indexing
 
-    cli(); // critical section, we are reading from the keyboard buffer
-	uint8_t *term_buf = (uint8_t *)buf; // both poiting at the same place
+    terminal_flag_keyboard = 1;
+    janky_spinlock_flag = 0;
+    keyboard_index = 0;
+    while(janky_spinlock_flag != 1);
 
-	// for (term_index = 0; (term_index < LIMIT) && (term_index < nbytes-1); term_index++)
-    // {
-	// 	term_buf[term_index] = keyboard_buffer[term_index]; // the term_buf is the local buffer, buffer is from keyboard
-	// }
-	// empty_buffer(keyboard_buffer); // clear out the keyboard buffer
+    uint32_t term_index;
+    uint8_t* term_buf = (uint8_t*)buf;
 
-    sti();
+    for(term_index = 0; term_index < keyboard_index && term_index < LIMIT && term_index < nbytes; term_index++)
+    {
+        term_buf[term_index] = keyboard_buffer[term_index];
+    }
+    buffer_limit_flag = 0;
+    terminal_flag_keyboard = 0;
 	return term_index; // return how many bytes were written on the buf
 }
 
@@ -130,4 +133,23 @@ int32_t terminal_write(int32_t fd, const void* buf, int32_t nbytes)
 	sti();
 
 	return temp;
+}
+
+int32_t terminal_test()
+{
+    int32_t cnt;
+    uint8_t buf[LIMIT];
+
+    terminal_write(1, (uint8_t*)"Hi, what's your name? ", LIMIT);
+    cnt = terminal_read(0, buf, LIMIT);
+    if (cnt == -1)
+    {
+        terminal_write(1, (uint8_t*)"Can't read name from keyboard.\n", LIMIT);
+        return 3;
+    }
+    buf[cnt] = '\0';
+    terminal_write(1, (uint8_t*)"Hello, ", LIMIT);
+    terminal_write(1, buf, LIMIT);
+
+    return 0;
 }

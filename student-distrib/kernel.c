@@ -12,6 +12,7 @@
 #include "PeachOS_IDT.h"
 #include "PeachOS_Interrupt.h"
 #include "PeachOS_RTC.h"
+#include "PeachOS_Terminal.h"
 
 /* Macros. */
 /* Check if the bit BIT in FLAGS is set. */
@@ -25,7 +26,7 @@ entry (unsigned long magic, unsigned long addr)
 	multiboot_info_t *mbi;
 
 	/* Clear the screen. */
-	clear();
+	clear_screen();
 
 	/* Am I booted by a Multiboot-compliant boot loader? */
 	if (magic != MULTIBOOT_BOOTLOADER_MAGIC)
@@ -149,27 +150,28 @@ entry (unsigned long magic, unsigned long addr)
 		ltr(KERNEL_TSS);
 	}
 
+
 	/* Init the PIC */
 	i8259_init();
+	sti();
+
+	/* Initialize devices, memory, filesystem, enable device interrupts on the
+	 * PIC, any other initialization stuff...
+	 */
 
 	/* Initialize the RTC */
+	// printf("Enabling RTC\n");
 	rtc_init();
 
 	/* Intialize the keyboard */
+	// printf("Enabling Keyboard\n");
 	keyboard_init();
 
-	/* Initialize devices, memory, filesystem, enable device interrupts on the
-	 * PIC, any other initialization stuff... */
+	// printf("Enabling Paging\n");
 	paging_init();
-	//printf("Enabling Paging\n");
-	/* Enable interrupts */
-	/* Do not enable the following until after you have set up your
-	 * IDT correctly otherwise QEMU will triple fault and simple close
-	 * without showing you any output */
-	/**/
 
-	printf("Enabling Interrupts\n");
-	sti();
+	// printf("Enabling Terminal\n");
+	terminal_init();
 
 	/* Execute the first program (`shell') ... */
 

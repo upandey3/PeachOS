@@ -6,7 +6,6 @@
 volatile int rtc_flag = 0;
 
 int freq_test;
-
 int rtc_test_flag;
 
 /*
@@ -18,17 +17,19 @@ int rtc_test_flag;
 *   OSDev referenced here: http://wiki.osdev.org/RTC
 */
 
+/* check first outb statement below */
+
 void
 rtc_init()
 {
   unsigned char prev_value;                                                     // temporary variable created to store old value
-  outb(INDEX_REGISTER_A, RTC_PORT);                                             // select register A and disable NMI
+  outb(INDEX_REGISTER_B, RTC_PORT);                                            // select register B and disable NMI
   prev_value = inb(CMOS_PORT);                                                  // read the current value of register B and store
   outb(INDEX_REGISTER_B, RTC_PORT);                                             // reset the index
-  outb(INITMASK | prev_value, CMOS_PORT);                                       // write the previous value ORed with 0x40, this turns on bit 6 of register B
+  outb(INITMASK | prev_value, CMOS_PORT);
 
   freq_test = 2;
-  rtc_test_flag = 0;
+  rtc_test_flag = 0;                                       // write the previous value ORed with 0x40, this turns on bit 6 of register B
 
   enable_irq(RTC_IRQ);                                                          // enable the RTC irq on the PIC
 }
@@ -50,10 +51,10 @@ rtc_input_handler(void)
 {
   cli();                                                                        // mask all interrupts
 
-  outb(INDEX_REGISTER_C, RTC_PORT);                                                         // selects register C
+  outb(0x0C, RTC_PORT);                                                         // selects register C
   inb(CMOS_PORT);                                                               // throws away contents
   send_eoi(RTC_IRQ);                                                            // send end of interrupt to PIC
-  rtc_flag = 1;                                                                 // clear the interrupt flag
+  rtc_flag = 1;                                                                     // clear the interrupt flag
 
   sti();                                                                        // unmask all interrupts
 }
@@ -69,12 +70,12 @@ rtc_input_handler(void)
 int32_t
 rtc_read(int32_t fd, void* buf, int32_t nbytes)
 {
-  while (rtc_flag == 0)                                                         // keep spinning and waiting till
+  while (rtc_flag == 0)                                                             // keep spinning and waiting till
   {                                                                             // the handler has cleared the flag
                                                                                 // do nothing inside the while loop
   }
 
-  rtc_flag = 0;                                                                 // set the flag
+  rtc_flag = 0;                                                                     // set the flag
   return 0;                                                                     // always return 0
 }
 
@@ -135,6 +136,9 @@ void freq_set(int32_t arg)
           break;
       case 2:
           temp = ONE;
+          break;
+      case 0:
+          temp = ZERO;
           break;
       default:
           break;
