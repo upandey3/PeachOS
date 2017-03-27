@@ -4,7 +4,8 @@
 #include "PeachOS_Terminal.h"
 
 volatile int rtc_flag = 0;
-int frequency_var;
+
+int freq_test;
 int rtc_test_flag;
 
 /*
@@ -22,13 +23,13 @@ void
 rtc_init()
 {
   unsigned char prev_value;                                                     // temporary variable created to store old value
-  outb(INDEX_REGISTER_B, RTC_PORT);                                             // select register B and disable NMI
+  outb(INDEX_REGISTER_B, RTC_PORT);                                            // select register B and disable NMI
   prev_value = inb(CMOS_PORT);                                                  // read the current value of register B and store
   outb(INDEX_REGISTER_B, RTC_PORT);                                             // reset the index
   outb(INITMASK | prev_value, CMOS_PORT);
 
-  frequency_var = 2;
-  rtc_test_flag = 0;                                                            // write the previous value ORed with 0x40, this turns on bit 6 of register B
+  freq_test = 2;
+  rtc_test_flag = 0;                                       // write the previous value ORed with 0x40, this turns on bit 6 of register B
 
   enable_irq(RTC_IRQ);                                                          // enable the RTC irq on the PIC
 }
@@ -53,7 +54,7 @@ rtc_input_handler(void)
   outb(0x0C, RTC_PORT);                                                         // selects register C
   inb(CMOS_PORT);                                                               // throws away contents
   send_eoi(RTC_IRQ);                                                            // send end of interrupt to PIC
-  rtc_flag = 1;                                                                 // clear the interrupt flag
+  rtc_flag = 1;                                                                     // clear the interrupt flag
 
   sti();                                                                        // unmask all interrupts
 }
@@ -69,12 +70,12 @@ rtc_input_handler(void)
 int32_t
 rtc_read(int32_t fd, void* buf, int32_t nbytes)
 {
-  while (rtc_flag == 0)                                                         // keep spinning and waiting till
+  while (rtc_flag == 0)                                                             // keep spinning and waiting till
   {                                                                             // the handler has cleared the flag
                                                                                 // do nothing inside the while loop
   }
 
-  rtc_flag = 0;                                                                 // set the flag
+  rtc_flag = 0;                                                                     // set the flag
   return 0;                                                                     // always return 0
 }
 
@@ -213,39 +214,38 @@ rtc_close(int32_t fd)
   return 0;                                                                     // and return 0
 }
 
-/*
-*   RTC test function: void rtc_test(void);
-*
-*   Inputs: void
-*   Return Value: void
-*	  Function: Tests the RTC periodic interrupts
-*/
+/* RTC test function */
 
 void
 rtc_test(void)
 {
   int temp;
-  frequency_var = frequency_var * 2;                                            // keep increasing the frequency by powers of 2 each time function is called
 
-  if (frequency_var > 1024)                                                     // when frequency reaches max value, reset back to 2
+  freq_test = freq_test * 2;
+
+  if (freq_test > 1024)
   {
-    frequency_var = 2;                                                          // as per the test cases gif
+    freq_test = 2;
   }
 
-  rtc_write(0, &frequency_var, 4);                                              // call RTC write with current frequency
-  do {                                                                          // while the flag is cleared, keep printing 1's to terminal
-    if (rtc_read(0, &temp, 4) == 0)
+  rtc_write(0, &freq_test, 4);
+
+  do {
+
+    if (!rtc_read(0, &temp, 4))
     {
-      if (x_position() != 79)                                                   // if x_pos reaches end of the screen, go to next line
-      {
-        terminal_write(1, (char*)"1", 1);
-      }
-      else
+      if (current_x() == 79)
       {
         printf("\n");
       }
+
+      else
+      {
+        terminal_write(1, (char*)"1", 1);
+      }
     }
+
   } while(rtc_test_flag);
 
-  clear();                                                                      // clear screen at the end
+  clear();
 }

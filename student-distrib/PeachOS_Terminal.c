@@ -44,7 +44,7 @@ void terminal_init()
  *          This function opens the terminal, so we can read and write to it
  *
  *  INPUT:
- *          filename : STILL NEED RESEARCH
+ *          filename
  *
  *  OUTPUT: none
  *  SOURCE: http://freesoftwaremagazine.com/articles/drivers_linux/
@@ -53,6 +53,7 @@ void terminal_init()
 int32_t terminal_open(const uint8_t* filename)
 {
   /* Success */
+  printf("Opening Terminal");
   return 0;
 }
 
@@ -62,7 +63,7 @@ int32_t terminal_open(const uint8_t* filename)
  *          This function closes the terminal, so nothing can be read or written to it
  *
  *  INPUT:
- *          fd : STILL NEED RESEARCH
+ *          fd- File descriptor
  *
  *  OUTPUT: none
  *  SOURCE: http://freesoftwaremagazine.com/articles/drivers_linux/
@@ -71,6 +72,7 @@ int32_t terminal_open(const uint8_t* filename)
 int32_t terminal_close(int32_t fd)
 {
   /* Success */
+  printf("Closing Terminal");
   return 0;
 }
 
@@ -80,7 +82,7 @@ int32_t terminal_close(int32_t fd)
  *          This function is used to read the keyboard buffer and send the info
  *
  *  INPUT:
- *         fd : STILL NEED RESEARCH
+ *         fd : File descriptor
  *         buf : Fill this buffer with values to send back to the USER
  *         nbytes : limit of the buffer sent in by the USER
  *
@@ -91,21 +93,20 @@ int32_t terminal_close(int32_t fd)
 */
 int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes)
 {
-
-    terminal_flag_keyboard = 1;
-    janky_spinlock_flag = 0;
-    keyboard_index = 0;
-    while(janky_spinlock_flag != 1);
+    terminal_flag_keyboard = 1; // If this is ON that means we are using the terminal functions.
+    janky_spinlock_flag = 0; // janky_spinlock to get keyboard inputs
+    keyboard_index = 0; // keybaord index starts out as 0 initally, so we dont take in inputs before read is used
+    while(janky_spinlock_flag != 1); // voltalite flag, flag changes to 1 when ENTER_KEY is presseds
 
     uint32_t term_index;
-    uint8_t* term_buf = (uint8_t*)buf;
+    uint8_t* term_buf = (uint8_t*)buf; // poointing at the same thing
 
     for(term_index = 0; term_index < keyboard_index && term_index < LIMIT && term_index < nbytes; term_index++)
     {
-        term_buf[term_index] = keyboard_buffer[term_index];
+        term_buf[term_index] = keyboard_buffer[term_index]; // copying over the keyboard buffer to buf we send back
     }
-    buffer_limit_flag = 0;
-    terminal_flag_keyboard = 0;
+    buffer_limit_flag = 0; // set the overflow flag to 0
+    terminal_flag_keyboard = 0; // turn off the terminal flag
 	return term_index; // return how many bytes were written on the buf
 }
 
@@ -115,7 +116,7 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes)
  *          This function is used to write to the terminal using the keboard buffer
  *
  *  INPUT:
- *         fd : STILL NEED RESEARCH
+ *         fd : File Descriptor
  *         buf : buf is already filled with values, print it out
  *         nbytes : limit of the buffer sent in by the USER
  *
@@ -135,6 +136,10 @@ int32_t terminal_write(int32_t fd, const void* buf, int32_t nbytes)
 	return temp;
 }
 
+/*
+ * TESTING FUNCTION
+*/
+
 int32_t terminal_test()
 {
     int32_t cnt;
@@ -150,6 +155,5 @@ int32_t terminal_test()
     buf[cnt] = '\0';
     terminal_write(1, (uint8_t*)"Hello, ", LIMIT);
     terminal_write(1, buf, LIMIT);
-
     return 0;
 }

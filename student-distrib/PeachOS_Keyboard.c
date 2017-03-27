@@ -4,6 +4,7 @@
  * vim:ts=4 noexpandtab
  */
 #include "PeachOS_Keyboard.h"
+#include "PeachOS_FileSys.h"
 
 /* The following array is taken from
  *    http://www.osdever.net/bkerndev/Docs/keyboard.htm;
@@ -236,19 +237,22 @@ void keyboard_key_pressed(uint8_t keyboard_value)
         {
             clear_screen();
             // List All Files
-            printf("List All Files");
+            print_directory();
         }
         if(keyboard_ascii == '2')
         {
             clear_screen();
             // Read File by Name
-            printf("Read All Files");
+            uint8_t * char_array;
+            char array[100] = "frame0.txt";
+            char_array = (uint8_t* )array;
+            print_file_by_name(char_array);
         }
         if(keyboard_ascii == '3')
         {
             clear_screen();
             // Read File by Index
-            printf("Read File By Index");
+            print_file_by_index(11);
         }
         if(keyboard_ascii == '4')
         {
@@ -256,14 +260,16 @@ void keyboard_key_pressed(uint8_t keyboard_value)
             sti();
             rtc_test_flag = 1;
             clear_screen();
+            //set_xy(0,0);
             rtc_test();
         }
         if(keyboard_ascii == '5')
         {
             rtc_test_flag = 0;
-            frequency_var = 2;
+            freq_test = 2;
             rtc_close(0);
             clear_screen();
+            //set_xy(0,0);
         }
 
         return;
