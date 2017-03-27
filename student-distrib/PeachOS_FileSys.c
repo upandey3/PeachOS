@@ -142,6 +142,19 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t length
 	return 0;
 }
 
+/*
+ * print_directory
+ *  DESCRIPTION:
+ *          This function reads "length" bytes from the starting position
+ *				  "offset" in the file with inode and returns the number of bytes
+ *				  read and placed in buf
+ *  INPUT: inode - index number to identify the file
+ *				 offset - the starting position offset to access a file
+ *				 buf - the buffer to write into from the file
+ *				 length - the number of bytes to be placed in the buffer
+ *  OUTPUT: none
+ *  RETURN VALUE: returns the number of bytes read and placed in buf, -1 otherwise
+*/
 int32_t print_directory()
 {
 	dentry_t test;
@@ -203,6 +216,19 @@ int32_t print_directory()
 	return 0;
 }
 
+/*
+ * print_file_by_name
+ *  DESCRIPTION:
+ *          This function reads "length" bytes from the starting position
+ *				  "offset" in the file with inode and returns the number of bytes
+ *				  read and placed in buf
+ *  INPUT: inode - index number to identify the file
+ *				 offset - the starting position offset to access a file
+ *				 buf - the buffer to write into from the file
+ *				 length - the number of bytes to be placed in the buffer
+ *  OUTPUT: none
+ *  RETURN VALUE: returns the number of bytes read and placed in buf, -1 otherwise
+*/
 int32_t print_file_by_name(const uint8_t* fname)
 {
 	dentry_t test;
@@ -243,6 +269,20 @@ int32_t print_file_by_name(const uint8_t* fname)
 
 	return 0;
 }
+
+/*
+ * print_file_by_index
+ *  DESCRIPTION:
+ *          This function reads "length" bytes from the starting position
+ *				  "offset" in the file with inode and returns the number of bytes
+ *				  read and placed in buf
+ *  INPUT: inode - index number to identify the file
+ *				 offset - the starting position offset to access a file
+ *				 buf - the buffer to write into from the file
+ *				 length - the number of bytes to be placed in the buffer
+ *  OUTPUT: none
+ *  RETURN VALUE: returns the number of bytes read and placed in buf, -1 otherwise
+*/
 
 int32_t print_file_by_index(uint32_t file_num)
 {
