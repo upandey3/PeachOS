@@ -219,10 +219,10 @@ rtc_test(void)
 
   freq_test = freq_test * 2;
 
-  //if (freq_test > 1024)
-  //{
-  //  freq_test = 2;
-  //}
+  if (freq_test > 1024)
+  {
+    freq_test = 2;
+  }
 
   rtc_write(0, &freq_test, 4);
 
