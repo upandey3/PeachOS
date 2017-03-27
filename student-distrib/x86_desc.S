@@ -87,7 +87,6 @@ gdt_bottom:
 
 .align 16
 
-<<<<<<< HEAD
 /* GDT struct created in order
 to hold the GDT size and
 starting address */
@@ -96,17 +95,6 @@ gdt_struct:
 .word gdt_bottom - gdt - 1
 .long gdt
 
-=======
-/* gdt_struct initialized here in
-	order to pass address and size
-	via lgdt instruction to load the
-	GDT */
-
-gdt_struct:
-	.word gdt_bottom - gdt - 1
-	.long gdt
-
->>>>>>> 94b83f6dd08b9b4eedf9b4a287dfc2ee783a7bb9
 ldt:
 .rept 4
 .quad 0

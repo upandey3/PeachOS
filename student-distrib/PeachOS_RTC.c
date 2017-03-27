@@ -50,7 +50,7 @@ rtc_input_handler(void)
 {
   cli();                                                                        // mask all interrupts
 
-  outb(0x0C, RTC_PORT);                                                         // selects register C
+  outb(INDEX_REGISTER_C, RTC_PORT);                                                         // selects register C
   inb(CMOS_PORT);                                                               // throws away contents
   send_eoi(RTC_IRQ);                                                            // send end of interrupt to PIC
   rtc_flag = 1;                                                                 // clear the interrupt flag
@@ -136,9 +136,6 @@ void freq_set(int32_t arg)
       case 2:
           temp = ONE;
           break;
-      case 0:
-          temp = ZERO;
-          break;
       default:
           break;
     }
@@ -222,10 +219,10 @@ rtc_test(void)
 
   freq_test = freq_test * 2;
 
-  if (freq_test > 1024)
-  {
-    freq_test = 2;
-  }
+  //if (freq_test > 1024)
+  //{
+  //  freq_test = 2;
+  //}
 
   rtc_write(0, &freq_test, 4);
 
