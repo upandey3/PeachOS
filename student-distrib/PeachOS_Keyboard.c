@@ -256,16 +256,14 @@ void keyboard_key_pressed(uint8_t keyboard_value)
             sti();
             rtc_test_flag = 1;
             clear_screen();
-            //set_xy(0,0);
             rtc_test();
         }
         if(keyboard_ascii == '5')
         {
             rtc_test_flag = 0;
-            freq_test = 2;
+            frequency_var = 2;
             rtc_close(0);
             clear_screen();
-            //set_xy(0,0);
         }
 
         return;

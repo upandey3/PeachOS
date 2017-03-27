@@ -122,13 +122,13 @@ update_cursor(void)
 
 
 /*
-* Current_x;
+* x_position();
 *   Inputs: none
 *   Return Value: none
-*	Function: gets current
+*	Function: gets current x co-ordinate
 */
 int
-current_x()
+x_position()
 {
   return screen_x;
 }
@@ -672,12 +672,12 @@ strncpy(int8_t* dest, const int8_t* src, uint32_t n)
 *	Function: increments video memory. To be used to test rtc
 */
 
-void
-test_interrupts(void)
-{
-	uint8_t i;
-	for (i=0; i < NUM_ROWS*NUM_COLS; i++)
-    {
-		video_mem[i<<1] = '1';
-	}
-}
+// void
+// test_interrupts(void)
+// {
+// 	uint8_t i;
+// 	for (i=0; i < NUM_ROWS*NUM_COLS; i++)
+//     {
+// 		video_mem[i<<1] = '1';
+// 	}
+// }

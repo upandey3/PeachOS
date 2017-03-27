@@ -24,9 +24,12 @@ int32_t rtc_close(int32_t fd);
 /* function declaration for helper function that sets RTC frequency */
 void freq_set(int32_t arg);
 
+/* function declaration for rtc test function */
 void rtc_test(void);
 
-int freq_test;
+/* variables for the rtc test declared here */
+int frequency_var;
+
 int rtc_test_flag;
 
 /* magic numbers defined for index registers and ports */
