@@ -22,7 +22,7 @@ void
 rtc_init()
 {
   unsigned char prev_value;                                                     // temporary variable created to store old value
-  outb(INDEX_REGISTER_B, RTC_PORT);                                             // select register B and disable NMI
+  outb(INDEX_REGISTER_A, RTC_PORT);                                             // select register B and disable NMI
   prev_value = inb(CMOS_PORT);                                                  // read the current value of register B and store
   outb(INDEX_REGISTER_B, RTC_PORT);                                             // reset the index
   outb(INITMASK | prev_value, CMOS_PORT);
@@ -164,6 +164,11 @@ rtc_write(int32_t fd, const void* buf, int32_t nbytes)
   if (nbytes != 4)                                                              // check if nbytes is not equal to 4
   {
     return -1;                                                                  // if it is then, return -1
+  }
+
+  if (buf == NULL)                                                              // Added post 3.2 as a fix
+  {
+    return -1;
   }
 
   int32_t temp;                                                                 // temporary variable declared
