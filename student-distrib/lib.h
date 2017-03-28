@@ -28,7 +28,7 @@ void newline_screen(void);
 void backspace_screen(void);
 void update_cursor(void);
 void test_interrupts(void);
-int x_position();
+int current_x();
 
 
 void* memset(void* s, int32_t c, uint32_t n);

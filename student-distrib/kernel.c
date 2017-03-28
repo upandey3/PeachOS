@@ -13,6 +13,7 @@
 #include "PeachOS_Interrupt.h"
 #include "PeachOS_RTC.h"
 #include "PeachOS_Terminal.h"
+#include "PeachOS_FileSys.h"
 
 /* Macros. */
 /* Check if the bit BIT in FLAGS is set. */
@@ -58,6 +59,10 @@ entry (unsigned long magic, unsigned long addr)
 		int mod_count = 0;
 		int i;
 		module_t* mod = (module_t*)mbi->mods_addr;
+
+//Assumes that the file system is the first module in list!!! Double check this
+		file_sys_addr = mod->mod_start;
+
 		while(mod_count < mbi->mods_count) {
 			printf("Module %d loaded at address: 0x%#x\n", mod_count, (unsigned int)mod->mod_start);
 			printf("Module %d ends at address: 0x%#x\n", mod_count, (unsigned int)mod->mod_end);
@@ -149,7 +154,7 @@ entry (unsigned long magic, unsigned long addr)
 		tss.esp0 = 0x800000;
 		ltr(KERNEL_TSS);
 	}
-
+	//clear_screen();
 
 	/* Init the PIC */
 	i8259_init();

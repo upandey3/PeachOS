@@ -34,7 +34,7 @@ clear(void)
 void
 clear_screen(void)
 {
-    int32_t i;
+    int32_t i; // Same as clear(), but we make screen_x and screen_y 0
     for(i=0; i<NUM_ROWS*NUM_COLS; i++) {
         *(uint8_t *)(video_mem + (i << 1)) = ' ';
         *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB;
@@ -53,23 +53,24 @@ clear_screen(void)
 void
 newline_screen(void)
 {
-    if(screen_y == NUM_ROWS -1)
+    if(screen_y == NUM_ROWS -1) //if we are at the bottom edge then we "scroll"
     {
-        int32_t i;
-        for(i=0; i<(NUM_ROWS-1)*NUM_COLS; i++) {
-            *(uint8_t *)(video_mem + (i << 1)) = *(uint8_t *)(video_mem + ((i+NUM_COLS) << 1));
-            *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB;
-        }
+        int32_t i; // if we are at the right most edge, we goto a new line
+        for(i = 0; i < (NUM_ROWS - 1) * NUM_COLS; i++)
+        {
+            *(uint8_t *)(video_mem + (i << 1)) = *(uint8_t *)(video_mem + ((i + NUM_COLS) << 1));
+            *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB; // implementing scrolling
+        }                                                    // copying over data from previous line
         for(i = (NUM_ROWS-1)*NUM_COLS; i < (NUM_ROWS)*NUM_COLS; i++)
         {
             *(uint8_t *)(video_mem + (i << 1)) = ' ';
-            *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB;
+            *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB; // clearing out the last line, becuase we "Scrolled"
         }
         screen_x = 0;
     }
     else
     {
-        screen_x = 0;
+        screen_x = 0; // if we arent at the bottom edge then just increment the screen x and screen y
         screen_y++;
     }
 }
@@ -83,22 +84,22 @@ newline_screen(void)
 void
 backspace_screen(void)
 {
-    if((screen_x == 0 && screen_y == 0))
+    if((screen_x == 0 && screen_y == 0)) // if we are at the beginning of the screen dont do anything
         return;
-    if(screen_x)
+    if(screen_x) // if we screen_x > 0 then we delete horizontally
     {
         screen_x--;
         *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1) + 1) = ATTRIB;
         *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1)) = ' ';
     }
-    else
+    else // if screen_x is 0 then we delete verticall, then horizontally again
     {
         screen_y--;
         screen_x = NUM_COLS - 1;
         *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1) + 1) = ATTRIB;
         *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1)) = ' ';
     }
-    update_cursor();
+    update_cursor(); // update cursor becuase screen_x or screen_y was changed
 }
 
 /*
@@ -106,11 +107,13 @@ backspace_screen(void)
 *   Inputs: row and col of where we are
 *   Return Value: none
 *	Function: Clears video memory
+*   Source: http://wiki.osdev.org/Text_Mode_Cursor
+*           http://www.osdever.net/FreeVGA/vga/textcur.htm
 */
 void
 update_cursor(void)
 {
-   uint32_t position = (screen_y * NUM_COLS) + screen_x;// + 1;
+   uint32_t position = (screen_y * NUM_COLS) + screen_x; // get the position of where you are on the screen
 
    // cursor LOW port to vga INDEX register
    outb(0x0F, LOW_PORT_VGA);
@@ -122,13 +125,13 @@ update_cursor(void)
 
 
 /*
-* x_position();
+* Current_x;
 *   Inputs: none
 *   Return Value: none
-*	Function: gets current x co-ordinate
+*	Function: gets current
 */
 int
-x_position()
+current_x()
 {
   return screen_x;
 }
@@ -672,12 +675,12 @@ strncpy(int8_t* dest, const int8_t* src, uint32_t n)
 *	Function: increments video memory. To be used to test rtc
 */
 
-// void
-// test_interrupts(void)
-// {
-// 	uint8_t i;
-// 	for (i=0; i < NUM_ROWS*NUM_COLS; i++)
-//     {
-// 		video_mem[i<<1] = '1';
-// 	}
-// }
+void
+test_interrupts(void)
+{
+	uint32_t i;
+	for (i = 0; i < NUM_ROWS * NUM_COLS; i++)
+    {
+		video_mem[i<<1] = '1';
+	}
+}
