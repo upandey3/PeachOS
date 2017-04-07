@@ -1,9 +1,27 @@
 #include "PeachOS_FileSys.h"
 
 
+int32_t num_directories;
+int32_t num_inodes;
+int32_t num_datablocks;
+dentry_t* dirEntries;
+inode_t* inodes;
+uint32_t bbAddr;
+uint32_t dataStart;
 
-uint32_t file_sys_addr;
+void fileSystem_init(uint32_t fsAddr)
+{
+  bbAddr = fsAddr;
+  bootblock_t* bb = (bootblock_t*)(bbAddr);
 
+  num_directories = bb->num_directories;
+  num_inodes = bb->num_inodes;
+  num_datablocks = bb->num_datablocks;
+
+  dirEntries = (dentry_t *)(bbAddr + FILESTATS);
+  inodes = (inode_t*)(bbAddr + BLOCK_SIZE);
+  dataStart = (bbAddr) + (BootBlock.num_inodes+1)*(BLOCK_SIZE);
+}
 
 /*
  * read_dentry_by_name
@@ -18,29 +36,25 @@ uint32_t file_sys_addr;
 
 int32_t read_dentry_by_name(const uint8_t* fname, dentry_t* dentry)
 {
-	uint32_t num_files = *(uint32_t*)file_sys_addr;
-	uint32_t address;
-	int i;
+  int i;
+  int len = strlen((int8_t*)(fname));
 
-	if(strlen((char*)fname)>FILE_NAME_SIZE)
+  if (len > FILENAMESIZE)
 	{
 		return -1;
 	}
 
-	for(i=0; i<num_files; i++)
-	{
-		address = i*DENTRY_BLOCK_SIZE+file_sys_addr+BOOT_BLOCK_SIZE;
-
-		if(strncmp((char*)fname, (char*)(address), FILE_NAME_SIZE) == 0)
-		{
-			strncpy((char*)dentry->file_name, (char*)(address), FILE_NAME_SIZE);
-			dentry->file_name[FILE_NAME_SIZE] = 0x0;
-			dentry->file_type = *(uint32_t*)(address+FILE_NAME_SIZE);
-			dentry->inode_number = *((uint32_t*)(address+FILE_NAME_SIZE+FILE_TYPE_SIZE));
-			return 0;
-		}
-	}
-	return -1;
+  for (i = 0; i < DIRENTRIES; i++)
+  {
+    if ((strncmp(dirEntries[i].filename,  (int8_t*)(fname), len)) == 0)
+    {
+       strncpy(dentry->filename, dirEntries[i].filename, FILENAMESIZE);
+       dentry->filetype = dirEntries[i]. filetype;
+       dentry->inode = dirEntries[i].inode;
+       return 0;
+    }
+  }
+  return -1;
 }
 
 
@@ -57,19 +71,15 @@ int32_t read_dentry_by_name(const uint8_t* fname, dentry_t* dentry)
 */
 int32_t read_dentry_by_index(uint32_t index, dentry_t* dentry)
 {
-	uint32_t address = file_sys_addr+BOOT_BLOCK_SIZE+index*DENTRY_BLOCK_SIZE;
+  if (index > DIRENTRIES || index < 0)
+  {
+    return -1;
+  }
+  strncpy(dentry->filename, dirEntries[index].filename, FILENAMESIZE);
+  dentry->filetype = dirEntries[index].filetype;
+  dentry->inode = dirEntries[index].inode;
 
-	if(index >= *(uint32_t*)file_sys_addr || index < 0)
-	{
-		return -1;
-	}
-
-	strncpy((char*)dentry->file_name, (char*)(address), FILE_NAME_SIZE);
-	dentry->file_name[FILE_NAME_SIZE] = 0x0;
-	dentry->file_type = *(uint32_t*)(address+FILE_NAME_SIZE);
-	dentry->inode_number = *((uint32_t*)(address+FILE_NAME_SIZE+FILE_TYPE_SIZE));
-
-	return 0;
+  return 0;
 }
 
 /*
@@ -88,6 +98,62 @@ int32_t read_dentry_by_index(uint32_t index, dentry_t* dentry)
 
 int32_t read_data(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t length)
 {
+	int i, j, k;
+	uint32_t num_inodes, file_length, db_start_idx, db_start_byte_idx,
+	num_bytes_to_copy, num_db_needed, byte_index;
+	char * byte_array;
+	inode * db_array, dest_inode;
+	uint32_t * inode_data_array
+
+	// get the number of inodes
+  num_inodes = ((bootblock_t *)file_sys_addr)->num_inodes;
+	//Checking if inode is invalid (if the index is greater than N - 1)
+	if (inode >= num_inodes)
+		return -1;
+
+	dest_inode = (inode_t *)(file_sys_addr + BLOCK_SIZE);
+	dest_inode = dest_inode[inode]; //points to the inode
+
+	//make an array of data block indices
+	inode_data_array = (uint32_t *)dest_inode;
+	file_length = inode_data_array[0];//first index
+	inode_data_array += 1;
+
+	//Check if start address is greater than file length
+	if (offset >= file_length)
+		return -1;
+
+	//make a data block array and get first data block, and first byte index
+	db_array = (inode_t * t) file_sys_addr + num_inodes + 1;
+	db_start_idx = offset / (BLOCK_SIZE - 1);
+	db_start_byte_idx = offset % (BLOCK_SIZE - 1);
+
+	num_bytes_to_copy = (file_length - 1 <= length + offset)? file_length - offset : length;
+	num_db_needed = (num_bytes_to_copy + db_start_byte_idx + 1)/ BLOCK_SIZE;
+
+	k = 0; i = db_start_idx; byte_index = db_start_byte_idx; // 5
+	while (i < db_start_idx + num_db_needed){
+
+		byte_array = (char *)db_array[inode_data_array[i]]; // get the byte array of the db
+		while (byte_index < BLOCK_SIZE && k < num_bytes_to_copy]){
+			buf[k++] = byte_array[byte_index++];
+		}
+		i++;
+
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+/*
 	uint32_t total_num_inodes; 	    //how many inodes? Needed for offset to data blocks
 	uint32_t data_block_number;     //0th data block #
 	uint32_t data_block_start_address;  //0th data block address
@@ -140,6 +206,7 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t length
 
 
 	return 0;
+*/
 }
 
 /*
