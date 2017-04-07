@@ -18,9 +18,9 @@
 uint8_t keyboard_buffer[LIMIT];
 uint32_t keyboard_index; //index for the array
 
-volatile uint32_t janky_spinlock_flag;
-volatile uint32_t buffer_limit_flag;
-uint32_t terminal_flag_keyboard;
+volatile uint32_t janky_spinlock_flag; // janky_spinlock for waiting to get the kebaord input
+volatile uint32_t buffer_limit_flag; // overflow flag
+uint32_t terminal_flag_keyboard; // terminal flag, set if we are in terminal mode
 
 /* -- MASTER PIC- IRQ1 IS FOR KEYBOARD --  */
 #define KEYBOARD_IRQ	   1
@@ -83,10 +83,5 @@ extern void keyboard_backspace_key_pressed();
 /* Clear out the buffer */
 void empty_buffer(uint8_t* keyboard_buffer);
 
-/* Terminal function for read */
-// uint32_t terminal_kread(uint8_t* buf, int32_t nbytes);
-
-/* Terminal function for write */
-// uint32_t terminal_kwrite(const uint8_t* buf, int32_t nbytes);
 
 #endif

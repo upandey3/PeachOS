@@ -30,6 +30,7 @@ typedef struct terminal_data
 } terminal_data_t;
 
 terminal_data_t terminal;
+uint32_t keyboard_terminal_index;
 
 extern void terminal_init(void);
 

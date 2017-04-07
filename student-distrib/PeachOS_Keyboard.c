@@ -4,6 +4,7 @@
  * vim:ts=4 noexpandtab
  */
 #include "PeachOS_Keyboard.h"
+#include "PeachOS_FileSys.h"
 
 /* The following array is taken from
  *    http://www.osdever.net/bkerndev/Docs/keyboard.htm;
@@ -236,19 +237,22 @@ void keyboard_key_pressed(uint8_t keyboard_value)
         {
             clear_screen();
             // List All Files
-            printf("List All Files");
+            print_directory();
         }
         if(keyboard_ascii == '2')
         {
             clear_screen();
             // Read File by Name
-            printf("Read All Files");
+            uint8_t * char_array;
+            char array[100] = "frame0.txt";
+            char_array = (uint8_t* )array;
+            print_file_by_name(char_array);
         }
         if(keyboard_ascii == '3')
         {
             clear_screen();
             // Read File by Index
-            printf("Read File By Index");
+            print_file_by_index(11);
         }
         if(keyboard_ascii == '4')
         {
@@ -281,13 +285,23 @@ void keyboard_key_pressed(uint8_t keyboard_value)
             return;
         else
         {
-            putc(keyboard_ascii);
             if(terminal_flag_keyboard)
             {
-                keyboard_buffer[keyboard_index] = keyboard_ascii;
+                // keyboard_buffer[keyboard_index] = keyboard_ascii;
+                // if(keyboard_index > LIMIT)
+                //     buffer_limit_flag = 1;
+                // keyboard_index++;
                 if(keyboard_index > LIMIT)
                     buffer_limit_flag = 1;
+                if(buffer_limit_flag)
+                    return;
+                putc(keyboard_ascii);
+                keyboard_buffer[keyboard_index] = keyboard_ascii;
                 keyboard_index++;
+            }
+            else
+            {
+                putc(keyboard_ascii);
             }
         }
         return;
@@ -302,13 +316,19 @@ void keyboard_key_pressed(uint8_t keyboard_value)
             return;
         else
         {
-            putc(keyboard_ascii);
             if(terminal_flag_keyboard)
             {
-                keyboard_buffer[keyboard_index] = keyboard_ascii;
                 if(keyboard_index > LIMIT)
                     buffer_limit_flag = 1;
+                if(buffer_limit_flag)
+                    return;
+                putc(keyboard_ascii);
+                keyboard_buffer[keyboard_index] = keyboard_ascii;
                 keyboard_index++;
+            }
+            else
+            {
+                putc(keyboard_ascii);
             }
         }
         return;
@@ -323,13 +343,19 @@ void keyboard_key_pressed(uint8_t keyboard_value)
             return;
         else
         {
-            putc(keyboard_ascii);
             if(terminal_flag_keyboard)
             {
-                keyboard_buffer[keyboard_index] = keyboard_ascii;
                 if(keyboard_index > LIMIT)
                     buffer_limit_flag = 1;
+                if(buffer_limit_flag)
+                    return;
+                putc(keyboard_ascii);
+                keyboard_buffer[keyboard_index] = keyboard_ascii;
                 keyboard_index++;
+            }
+            else
+            {
+                putc(keyboard_ascii);
             }
         }
         return;
@@ -343,13 +369,19 @@ void keyboard_key_pressed(uint8_t keyboard_value)
             return;
         else
         {
-            putc(keyboard_ascii);
             if(terminal_flag_keyboard)
             {
-                keyboard_buffer[keyboard_index] = keyboard_ascii;
                 if(keyboard_index > LIMIT)
                     buffer_limit_flag = 1;
+                if(buffer_limit_flag)
+                    return;
+                putc(keyboard_ascii);
+                keyboard_buffer[keyboard_index] = keyboard_ascii;
                 keyboard_index++;
+            }
+            else
+            {
+                putc(keyboard_ascii);
             }
         }
         return;
@@ -400,6 +432,11 @@ keyboard_backspace_key_pressed()
         {
             keyboard_buffer[keyboard_index-1] = '\0';
             keyboard_index--;
+            if(keyboard_index < 128)
+            {
+                terminal_flag_keyboard = 1;
+                buffer_limit_flag = 0;
+            }
         }
         if(keyboard_index <= 0)
             return;
