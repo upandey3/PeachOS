@@ -242,6 +242,7 @@ void keyboard_key_pressed(uint8_t keyboard_value)
         if(keyboard_ascii == '2')
         {
             clear_screen();
+
             // Read File by Name
             uint8_t * char_array;
             char array[100] = "frame0.txt";
@@ -251,8 +252,10 @@ void keyboard_key_pressed(uint8_t keyboard_value)
         if(keyboard_ascii == '3')
         {
             clear_screen();
+
             // Read File by Index
-            print_file_by_index(11);
+            if(file_index<0 || file_index>16) file_index = 0;
+            print_file_by_index(file_index++);
         }
         if(keyboard_ascii == '4')
         {

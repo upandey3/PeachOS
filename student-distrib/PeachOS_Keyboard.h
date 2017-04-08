@@ -11,6 +11,7 @@
 #include "PeachOS_Interrupt.h"
 #include "PeachOS_RTC.h"
 #include "PeachOS_Terminal.h"
+#include "PeachOS_FileSys.h"
 
 #define LIMIT 128
 
