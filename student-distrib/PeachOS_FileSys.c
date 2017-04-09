@@ -52,7 +52,7 @@ int32_t read_dentry_by_name (const uint8_t* fname, dentry_t* dentry)
   {
     if ((strncmp(dirEntries[i].filename,  (int8_t*)(fname), len)) == 0)
     {
-       strncpy(dentry->filename, dirEntries[i].filename, len);
+       strncpy(dentry->filename, dirEntries[i].filename, FILENAMESIZE);
        dentry->filetype = dirEntries[i]. filetype;
        dentry->inode = dirEntries[i].inode;
        return 0;
