@@ -88,6 +88,7 @@ newline_screen(void)
 void
 backspace_screen(void)
 {
+    update_cursor();
     if((screen_x == 0 && screen_y == 0)) // if we are at the beginning of the screen dont do anything
         return;
     if(screen_x) // if we screen_x > 0 then we delete horizontally

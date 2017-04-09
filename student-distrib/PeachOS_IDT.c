@@ -115,7 +115,7 @@ void initialize_idt () {
 
   /* for system call, RTC handler and keyboard handler
      call the respective handlers defined in interrupt.S */
-  SET_IDT_ENTRY (idt[SYS_CAL], SYSTEM_CALL);
+  SET_IDT_ENTRY (idt[SYS_CAL], sysCall_handler);
   SET_IDT_ENTRY (idt[RTC_INT], rtc_handler);
   SET_IDT_ENTRY (idt[KBD_INT], keyboard_handler);
 

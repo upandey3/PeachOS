@@ -35,7 +35,7 @@ void terminal_init()
     // {
     //     *(uint8_t *)(terminal.terminal_video_mem + (i << 1)) = ' ';
     //     *(uint8_t *)(terminal.terminal_video_mem + (i << 1) + 1) = TERMINAL_ATTRIB;
-	// }
+    // }
 }
 
 /*
@@ -96,7 +96,7 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes)
     terminal_flag_keyboard = 1; // If this is ON that means we are using the terminal functions.
     janky_spinlock_flag = 0; // janky_spinlock to get keyboard inputs
     keyboard_index = 0; // keybaord index starts out as 0 initally, so we dont take in inputs before read is used
-    keyboard_terminal_index = keyboard_index;
+    // keyboard_terminal_index = keyboard_index;
     while(janky_spinlock_flag != 1); // voltalite flag, flag changes to 1 when ENTER_KEY is presseds
 
     uint32_t term_index = 0;
@@ -106,10 +106,10 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes)
     {
         term_buf[term_index] = keyboard_buffer[term_index]; // copying over the keyboard buffer to buf we send back
     }
-    keyboard_terminal_index = term_index; // get it equal to the highest keyboard_index then next time the read function is called, we make it 0;
+    // keyboard_terminal_index = term_index; // get it equal to the highest keyboard_index then next time the read function is called, we make it 0;
     buffer_limit_flag = 0; // set the overflow flag to 0
     terminal_flag_keyboard = 0; // turn off the terminal flag
-	return term_index; // return how many bytes were written on the buf
+    return term_index; // return how many bytes were written on the buf
 }
 
 /*
@@ -133,8 +133,9 @@ int32_t terminal_write(int32_t fd, const void* buf, int32_t nbytes)
     // uint32_t size = sizeof(buf);
     // uint32_t size_2 = sizeof(uint8_t);
     // size = size / size_2;
-	// cli(); // critical section we are using the keybaord buffer to write
+    // cli(); // critical section we are using the keybaord buffer to write
         // temp = printf((int8_t *)buf); // print the buf that was sent in
+        // return temp;
     for(temp = 0; temp < nbytes; temp++)
     {
         uint8_t buf_char = *((uint8_t*)buf + temp);
@@ -149,7 +150,7 @@ int32_t terminal_write(int32_t fd, const void* buf, int32_t nbytes)
         return temp;
     else
         return -1;
-	// sti();
+    // sti();
 }
 
 /*
