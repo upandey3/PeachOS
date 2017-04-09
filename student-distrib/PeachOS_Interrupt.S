@@ -1,5 +1,5 @@
-# PeachOS_Interrupt.S - Used for Interrupt Handling
-# vim:ts=4 noexpandtab
+/* # PeachOS_Interrupt.S - Used for Interrupt Handling
+# vim:ts=4 noexpandtab */
 
 #define ASM     1 /* BORROWED FROM x86_DESC.S */
 #include "x86_desc.h"
@@ -23,12 +23,24 @@
 #define ALL_INTERRUPT_HANDLER(interrupt_name, call_interrupt_handler)   \
 .GLOBL interrupt_name               ;\
 interrupt_name:                     ;\
-    pushal                          ;\
-    pushfl                          ;\
-    call call_interrupt_handler     ;\
-    popfl                           ;\
-    popal                           ;\
-    iret                            ;\
+
+  cli                             ;\
+
+  pushal                          ;\
+  pushfl                          ;\
+
+  sti                             ;\
+
+  call call_interrupt_handler     ;\
+
+  cli                             ;\
+
+  popfl                           ;\
+  popal                           ;\
+
+  sti                             ;\
+
+  iret                            ;\
 
 /* RTC and Keyboard input hanndlers called now */
 ALL_INTERRUPT_HANDLER(keyboard_handler, keyboard_input_handler);
@@ -48,7 +60,7 @@ ALL_INTERRUPT_HANDLER(rtc_handler, rtc_input_handler);
                   system call function on its own
  *
  *  SOURCES: https://blog.packagecloud.io/eng/2016/04/05/the-definitive-guide-to-linux-system-calls/#kernel-side-int-0x80-entry-point
- *          https://en.wikibooks.org/wiki/X86_Assembly/Interfacing_with_Linux
+ *           https://en.wikibooks.org/wiki/X86_Assembly/Interfacing_with_Linux
  *
 */
 
@@ -75,18 +87,18 @@ sysCall_handler:
   pushl %ebp
   pushl %edi
   pushl %esi
-  pushl %edx                  # 3rd argument
-  pushl %ecx                  # 2nd argument
-  pushl %ebx                  # 1st argument
+  pushl %edx                  /* 3rd argument */
+  pushl %ecx                  /* 2nd argument */
+  pushl %ebx                  /* 1st argument */
 
   /* Check to see whether value in eax is valid i.e. whether
       the call number placed in eax by 'int $0x80' is valid
       or not */
 
   cmpl $1, %eax
-  jl invalid_call             # if value in eax is less than 1
+  jl invalid_call             /* if value in eax is less than 1 */
   cmpl $10, %eax
-  jg invalid_call             # if value in eax is greater than 10
+  jg invalid_call             /* if value in eax is greater than 10 */
 
   /* if call number is valid then unmask interrupts and
       call the corresponding C function from the jump table */
