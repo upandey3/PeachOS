@@ -163,10 +163,12 @@ int32_t print_directory()
 {
 	dentry_t toprint;
 
+	uint8_t printbuffer[NUM_COLS];
+	uint8_t* printpointer;
 	uint8_t file_name_string[FILENAMESIZE+1];
 	uint8_t byte_string[MAX_BYTE_WIDTH];
 	uint8_t formatted_byte_string[MAX_BYTE_WIDTH+1];
-	uint8_t file_type_string[sizeof(uint32_t)+1];
+	uint8_t file_type_string[2] = {0};
 
 	int i, j, file_len, byte_len;
 
@@ -208,13 +210,30 @@ int32_t print_directory()
 			}
 			formatted_byte_string[MAX_BYTE_WIDTH] = 0x0;
 
-            terminal_write(1, (char*)"file_name: ", 0);
-            terminal_write(1, (char*)file_name_string, 0);
-            terminal_write(1, (char*)", file_type: ", 0);
-            terminal_write(1, (char*)file_type_string, 0);
-            terminal_write(1, (char*)", file_size: ", 0);
-            terminal_write(1, (char*)formatted_byte_string, MAX_BYTE_WIDTH);
-			terminal_write(1, (char*)"\n", 1);
+
+			printpointer = printbuffer;
+
+			memcpy(printpointer, "file_name: ", sizeof("file_name: "));
+			printpointer+=sizeof("file_name: ")-1;
+
+			memcpy(printpointer, file_name_string, sizeof(file_name_string));
+			printpointer+=sizeof(file_name_string)-1;
+
+			memcpy(printpointer, ", file_type: ", sizeof(", file_type: "));
+			printpointer+=sizeof(", file_type: ")-1;
+
+			memcpy(printpointer, file_type_string, sizeof(uint8_t));
+			printpointer+=sizeof(uint8_t);
+
+			memcpy(printpointer, ", file_size: ", sizeof(", file_size: "));
+			printpointer+=sizeof(", file_size: ")-1;
+
+			memcpy(printpointer, formatted_byte_string, sizeof(formatted_byte_string));	
+			printpointer+=sizeof(formatted_byte_string)-1;
+
+			memcpy(printpointer, "\n", sizeof("\n"));		
+
+			terminal_write(1, (char*)printbuffer, sizeof(printbuffer));
 		}
 	}
 	return 0;
@@ -256,15 +275,16 @@ int32_t print_file_by_name(const uint8_t* fname)
 		{
 			printbuf[0] = buf[i];
 			if(printbuf[0] == NULL) printbuf[0] = ' ';
-		    terminal_write(1, (char*)printbuf, 0);
+		    terminal_write(1, (char*)printbuf, 1);
 		}
 
 		//copy filename (32 bytes) to file_name (33 bytes, null terminated) for printing
 		strncpy((char*)file_name, (char*)(toprint.filename), FILENAMESIZE);
 
-		terminal_write(1, (char*)"\n", 0);
-		terminal_write(1, (char*)"file_name: ", 0);
-		terminal_write(1, (char*)file_name, 0);
+		terminal_write(1, (char*)"\n", 1);
+		terminal_write(1, (char*)"file_name: ", sizeof("file_name: "));
+		terminal_write(1, (char*)file_name, sizeof(file_name));
+		terminal_write(1, (char*)"\n", 1);
 	}
 	else
 	{
@@ -310,15 +330,16 @@ int32_t print_file_by_index(uint32_t file_num)
 		{
 			printbuf[0] = buf[i];
 			if(printbuf[0] == NULL) printbuf[0] = ' ';
-		    terminal_write(1, (char*)printbuf, 0);
+		    terminal_write(1, (char*)printbuf, 1);
 		}
 
 		//copy filename (32 bytes) to file_name (33 bytes, null terminated) for printing
 		strncpy((char*)file_name, (char*)(toprint.filename), FILENAMESIZE);
 
-		terminal_write(1, (char*)"\n", 0);
-		terminal_write(1, (char*)"file_name: ", 0);
-		terminal_write(1, (char*)file_name, 0);
+		terminal_write(1, (char*)"\n", 1);
+		terminal_write(1, (char*)"file_name: ", sizeof("file_name: "));
+		terminal_write(1, (char*)file_name, sizeof(file_name));
+		terminal_write(1, (char*)"\n", 1);
 	}
 	else
 	{
