@@ -6,9 +6,7 @@ kernel.o: kernel.c multiboot.h types.h x86_desc.h lib.h i8259.h debug.h \
   PeachOS_PAGING.h PeachOS_Keyboard.h PeachOS_Interrupt.h PeachOS_RTC.h \
   PeachOS_Terminal.h PeachOS_IDT.h PeachOS_FileSys.h
 lib.o: lib.c lib.h types.h
-PeachOS_FileSys.o: PeachOS_FileSys.c PeachOS_FileSys.h types.h lib.h \
-  PeachOS_Terminal.h i8259.h PeachOS_Keyboard.h x86_desc.h \
-  PeachOS_Interrupt.h PeachOS_RTC.h PeachOS_IDT.h
+PeachOS_FileSys.o: PeachOS_FileSys.c PeachOS_FileSys.h types.h lib.h
 PeachOS_IDT.o: PeachOS_IDT.c lib.h types.h PeachOS_IDT.h x86_desc.h \
   PeachOS_RTC.h PeachOS_Keyboard.h i8259.h PeachOS_Interrupt.h \
   PeachOS_Terminal.h

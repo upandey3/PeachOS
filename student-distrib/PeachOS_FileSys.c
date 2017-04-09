@@ -1,9 +1,56 @@
 #include "PeachOS_FileSys.h"
 
-
-
+int32_t num_directories;
+int32_t num_inodes;
+int32_t num_datablocks;
+dentry_t* dirEntries;
+inode_t* inodes;
+uint32_t bbAddr;
+uint32_t dataStart;
 uint32_t file_sys_addr;
 
+void fileSystem_init(uint32_t fsAddr)
+{
+  bbAddr = fsAddr;
+	printf("fsAddr is %d", fsAddr);
+  bootblock_t* bb = (bootblock_t*)(bbAddr);
+
+  num_directories = bb->num_directories;
+  num_inodes = bb->num_inodes;
+  num_datablocks = bb->num_datablocks;
+
+	//---TEST 1---------------------------------//
+	printf("num_directories is %d\n", num_directories);
+  printf("num_inodes is %d\n", num_inodes);
+  printf("num_datablocks is %x\n", num_datablocks);
+	//------------------------------------------//
+
+	dirEntries = (dentry_t *)(bb->dirEntries);
+  inodes = (inode_t*)(bbAddr + BLOCK_SIZE);
+  dataStart = (inodes[num_inodes]);
+
+	//------- TEST 2---------------------------//
+	uint32_t* temp;
+  int i, j;
+  for(j=0;j<17;j++)
+  {
+ 	 for(i=0; i<64; i++)
+ 	 {
+ 	 	temp = *(uint32_t*)(dirEntries[j].filename+i);
+ 	 	printf("%c",temp);
+ 	 }
+ 	 	printf("\n");
+  }
+  printf("dirEntries is %x\n", (dirEntries+63)->filename);
+  printf("inodes is %x\n", (dirEntries+64)->inode);
+  printf("dataStart is %x\n", dataStart);
+  printf("inode is %s\n", dirEntries[0].filename);
+  printf("inode is %s\n", dirEntries[1].filename);
+  printf("inode is %s\n", dirEntries[2].filename);
+  printf("inode is %s\n", dirEntries[3].filename);
+  printf("inode is %s\n", dirEntries[4].filename);
+	//------------------------------------------//
+}
 
 /*
  * read_dentry_by_name
@@ -18,29 +65,25 @@ uint32_t file_sys_addr;
 
 int32_t read_dentry_by_name(const uint8_t* fname, dentry_t* dentry)
 {
-	uint32_t num_files = *(uint32_t*)file_sys_addr;
-	uint32_t address;
-	int i;
+  int i;
+  int len = strlen((int8_t*)(fname));
 
-	if(strlen((char*)fname)>FILE_NAME_SIZE)
+  if (len > FILENAMESIZE)
 	{
 		return -1;
 	}
 
-	for(i=0; i<num_files; i++)
-	{
-		address = i*DENTRY_BLOCK_SIZE+file_sys_addr+BOOT_BLOCK_SIZE;
-
-		if(strncmp((char*)fname, (char*)(address), FILE_NAME_SIZE) == 0)
-		{
-			strncpy((char*)dentry->file_name, (char*)(address), FILE_NAME_SIZE);
-			dentry->file_name[FILE_NAME_SIZE] = 0x0;
-			dentry->file_type = *(uint32_t*)(address+FILE_NAME_SIZE);
-			dentry->inode_number = *((uint32_t*)(address+FILE_NAME_SIZE+FILE_TYPE_SIZE));
-			return 0;
-		}
-	}
-	return -1;
+  for (i = 0; i < DIRENTRIES; i++)
+  {
+    if ((strncmp(dirEntries[i].filename,  (int8_t*)(fname), len)) == 0)
+    {
+       strncpy(dentry->filename, dirEntries[i].filename, FILENAMESIZE);
+       dentry->filetype = dirEntries[i]. filetype;
+       dentry->inode = dirEntries[i].inode;
+       return 0;
+    }
+  }
+  return -1;
 }
 
 
@@ -57,19 +100,15 @@ int32_t read_dentry_by_name(const uint8_t* fname, dentry_t* dentry)
 */
 int32_t read_dentry_by_index(uint32_t index, dentry_t* dentry)
 {
-	uint32_t address = file_sys_addr+BOOT_BLOCK_SIZE+index*DENTRY_BLOCK_SIZE;
+  if (index > DIRENTRIES || index < 0)
+  {
+    return -1;
+  }
+  strncpy(dentry->filename, dirEntries[index].filename, FILENAMESIZE);
+  dentry->filetype = dirEntries[index].filetype;
+  dentry->inode = dirEntries[index].inode;
 
-	if(index >= *(uint32_t*)file_sys_addr || index < 0)
-	{
-		return -1;
-	}
-
-	strncpy((char*)dentry->file_name, (char*)(address), FILE_NAME_SIZE);
-	dentry->file_name[FILE_NAME_SIZE] = 0x0;
-	dentry->file_type = *(uint32_t*)(address+FILE_NAME_SIZE);
-	dentry->inode_number = *((uint32_t*)(address+FILE_NAME_SIZE+FILE_TYPE_SIZE));
-
-	return 0;
+  return 0;
 }
 
 /*
@@ -88,58 +127,47 @@ int32_t read_dentry_by_index(uint32_t index, dentry_t* dentry)
 
 int32_t read_data(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t length)
 {
-	uint32_t total_num_inodes; 	    //how many inodes? Needed for offset to data blocks
-	uint32_t data_block_number;     //0th data block #
-	uint32_t data_block_start_address;  //0th data block address
-	uint32_t* pointer;			//points to address of first data block for this inode
-	uint32_t num_bytes_in_file = *(uint32_t*)(file_sys_addr+ABSOLUTE_BLOCK_SIZE*(inode+1));
-	//unsigned char* temp_buffer;
-	uint32_t temp_length;
-	uint32_t data_block_pointer;
-	uint32_t num_blocks;
-	unsigned char* temp_pointer;
+	int i, j, k;
+	uint32_t file_length, db_start_idx, db_start_byte_idx,
+	num_bytes_to_copy, num_db_needed, byte_index;
+	char * byte_array;
+	inode * db_array, dest_inode;
+	uint32_t * inode_data_array
 
-	unsigned char* largebuffer[40000]={0};
-	int i;
-	//unsigned char data_block_test_data[length+1];
-	//data_block_test_data[length]=0x0;
+	//Checking if inode is invalid (if the index is greater than N - 1)
+	if (inode >= num_inodes)
+		return -1;
 
+	dest_inode = dest_inode[inode]; //points to the inode
 
-	total_num_inodes = *(uint32_t*)(file_sys_addr + NUM_DENTRIES_SIZE);
-	if(inode >= total_num_inodes || inode < 0) return -1;
+	//make an array of data block indices
+	inode_data_array = (uint32_t *)dest_inode;
+	file_length = inode_data_array[0];//first index
+	inode_data_array += 1;
 
-	data_block_pointer = (file_sys_addr+(inode+1)*ABSOLUTE_BLOCK_SIZE + LENGTH_IN_BYTES_SIZE);
-	data_block_number = *(uint32_t*)(data_block_pointer);
-	data_block_start_address = file_sys_addr+(total_num_inodes+data_block_number+1)*ABSOLUTE_BLOCK_SIZE;
+	//Check if start address is greater than file length
+	if (offset >= file_length)
+		return -1;
 
+	//make a data block array and get first data block, and first byte index
+	db_array = (inode_t *) bbAddr + num_inodes + 1;
+	db_start_idx = offset / (BLOCK_SIZE - 1);
+	db_start_byte_idx = offset % (BLOCK_SIZE - 1);
 
-	if(offset >= num_bytes_in_file) return 0;
+	num_bytes_to_copy = (file_length - 1 <= length + offset)? file_length - offset : length;
+	num_db_needed = (num_bytes_to_copy + db_start_byte_idx + 1)/ BLOCK_SIZE;
 
-	if(offset+length > num_bytes_in_file)
-	{
-		length = num_bytes_in_file - offset;
+	k = 0; i = db_start_idx; byte_index = db_start_byte_idx; // 5
+	while (i < db_start_idx + num_db_needed){
+
+		byte_array = (char *)db_array[inode_data_array[i]]; // get the byte array of the db
+		while (byte_index < BLOCK_SIZE && k < num_bytes_to_copy]){
+			buf[k++] = byte_array[byte_index++];
+		}
+		i++;
+
 	}
 
-	//largebuffer[40000]=
-	num_blocks = (uint32_t)(num_bytes_in_file/ABSOLUTE_BLOCK_SIZE);
-	if((num_bytes_in_file%ABSOLUTE_BLOCK_SIZE)!=0) num_blocks++;
-
-	temp_length = num_bytes_in_file;
-
-	for(i=0;i<num_blocks;i++){
-		data_block_number = *(uint32_t*)(file_sys_addr+(inode+1)*ABSOLUTE_BLOCK_SIZE + LENGTH_IN_BYTES_SIZE*(i+1));
-		pointer = (uint32_t*)(file_sys_addr+(total_num_inodes+data_block_number+1)*ABSOLUTE_BLOCK_SIZE);
-		memcpy((char*)largebuffer, (char*)pointer, temp_length);
-		temp_length -= ABSOLUTE_BLOCK_SIZE;
-	}
-
-	if(length>=num_bytes_in_file) length = num_bytes_in_file;
-	if(length+offset>=num_bytes_in_file) length = num_bytes_in_file-offset;
-	temp_pointer = (unsigned char*)largebuffer + offset;
-	memcpy((char*)buf, (char*)temp_pointer, length);
-
-
-	return 0;
 }
 
 /*
