@@ -53,6 +53,7 @@ clear_screen(void)
 void
 newline_screen(void)
 {
+    update_cursor();
     if(screen_y == NUM_ROWS -1) //if we are at the bottom edge then we "scroll"
     {
         int32_t i; // if we are at the right most edge, we goto a new line
@@ -67,12 +68,15 @@ newline_screen(void)
             *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB; // clearing out the last line, becuase we "Scrolled"
         }
         screen_x = 0;
+        update_cursor();
     }
     else
     {
         screen_x = 0; // if we arent at the bottom edge then just increment the screen x and screen y
         screen_y++;
+        update_cursor();
     }
+    update_cursor();
 }
 
 /*
@@ -84,6 +88,7 @@ newline_screen(void)
 void
 backspace_screen(void)
 {
+    update_cursor();
     if((screen_x == 0 && screen_y == 0)) // if we are at the beginning of the screen dont do anything
         return;
     if(screen_x) // if we screen_x > 0 then we delete horizontally

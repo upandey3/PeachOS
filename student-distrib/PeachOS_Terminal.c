@@ -35,7 +35,7 @@ void terminal_init()
     // {
     //     *(uint8_t *)(terminal.terminal_video_mem + (i << 1)) = ' ';
     //     *(uint8_t *)(terminal.terminal_video_mem + (i << 1) + 1) = TERMINAL_ATTRIB;
-	// }
+    // }
 }
 
 /*
@@ -96,18 +96,20 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes)
     terminal_flag_keyboard = 1; // If this is ON that means we are using the terminal functions.
     janky_spinlock_flag = 0; // janky_spinlock to get keyboard inputs
     keyboard_index = 0; // keybaord index starts out as 0 initally, so we dont take in inputs before read is used
+    // keyboard_terminal_index = keyboard_index;
     while(janky_spinlock_flag != 1); // voltalite flag, flag changes to 1 when ENTER_KEY is presseds
 
-    uint32_t term_index;
+    uint32_t term_index = 0;
     uint8_t* term_buf = (uint8_t*)buf; // poointing at the same thing
 
     for(term_index = 0; term_index < keyboard_index && term_index < LIMIT && term_index < nbytes; term_index++)
     {
         term_buf[term_index] = keyboard_buffer[term_index]; // copying over the keyboard buffer to buf we send back
     }
+    // keyboard_terminal_index = term_index; // get it equal to the highest keyboard_index then next time the read function is called, we make it 0;
     buffer_limit_flag = 0; // set the overflow flag to 0
     terminal_flag_keyboard = 0; // turn off the terminal flag
-	return term_index; // return how many bytes were written on the buf
+    return term_index; // return how many bytes were written on the buf
 }
 
 /*
@@ -128,12 +130,27 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes)
 int32_t terminal_write(int32_t fd, const void* buf, int32_t nbytes)
 {
     int32_t temp;
-
-	cli(); // critical section we are using the keybaord buffer to write
-	temp = printf((int8_t *)buf); // print the buf that was sent in
-	sti();
-
-	return temp;
+    // uint32_t size = sizeof(buf);
+    // uint32_t size_2 = sizeof(uint8_t);
+    // size = size / size_2;
+    // cli(); // critical section we are using the keybaord buffer to write
+        // temp = printf((int8_t *)buf); // print the buf that was sent in
+        // return temp;
+    for(temp = 0; temp < nbytes; temp++)
+    {
+        uint8_t buf_char = *((uint8_t*)buf + temp);
+        if(buf_char == '\n')
+        {
+            putc(buf_char);
+            break;
+        }
+        putc(buf_char);
+    }
+    if(temp > 0)
+        return temp;
+    else
+        return -1;
+    // sti();
 }
 
 /*
@@ -142,18 +159,18 @@ int32_t terminal_write(int32_t fd, const void* buf, int32_t nbytes)
 
 int32_t terminal_test()
 {
-    int32_t cnt;
+    int32_t cnt = 0;
     uint8_t buf[LIMIT];
 
-    terminal_write(1, (uint8_t*)"Hi, what's your name? ", LIMIT);
+    terminal_write(1, (uint8_t*)"Hi, what's your name? \n", LIMIT);
     cnt = terminal_read(0, buf, LIMIT);
-    if (cnt == -1)
+    if (cnt == 120929)
     {
         terminal_write(1, (uint8_t*)"Can't read name from keyboard.\n", LIMIT);
         return 3;
     }
-    buf[cnt] = '\0';
-    terminal_write(1, (uint8_t*)"Hello, ", LIMIT);
+    buf[cnt] = '\n';
+    terminal_write(1, (uint8_t*)"Hello, \n", LIMIT);
     terminal_write(1, buf, LIMIT);
     return 0;
 }

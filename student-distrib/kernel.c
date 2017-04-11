@@ -59,7 +59,6 @@ entry (unsigned long magic, unsigned long addr)
 		int mod_count = 0;
 		int i;
 		module_t* mod = (module_t*)mbi->mods_addr;
-
 		//Assumes that the file system is the first module in list!!! Double check this
 		fileSystem_init(mod->mod_start);
 

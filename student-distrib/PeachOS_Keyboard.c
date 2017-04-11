@@ -24,7 +24,7 @@ static uint8_t keyboard_map[CHAR_COUNT] =
 static uint8_t keyboard_map_S_NC[CHAR_COUNT] =
 {
     /* -- SHIFT -- NO CAPS LOCK -- OFFSET: 59 -- */
-	'\0', '\0', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', '\0',
+    '\0', '\0', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', '\0',
     '\0', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', '\0',
     '\0', 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L' , ':', '"', '~', '\0',
     '|', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '<', '>', '?', '\0',
@@ -251,6 +251,7 @@ void keyboard_key_pressed(uint8_t keyboard_value)
         if(keyboard_ascii == '3')
         {
             clear_screen();
+
             // Read File by Index
             if (fs_ctrl_3 < 0 || fs_ctrl_3 > 16)
               fs_ctrl_3 = 0;
@@ -287,13 +288,23 @@ void keyboard_key_pressed(uint8_t keyboard_value)
             return;
         else
         {
-            putc(keyboard_ascii);
             if(terminal_flag_keyboard)
             {
-                keyboard_buffer[keyboard_index] = keyboard_ascii;
+                // keyboard_buffer[keyboard_index] = keyboard_ascii;
+                // if(keyboard_index > LIMIT)
+                //     buffer_limit_flag = 1;
+                // keyboard_index++;
                 if(keyboard_index > LIMIT)
                     buffer_limit_flag = 1;
+                if(buffer_limit_flag)
+                    return;
+                putc(keyboard_ascii);
+                keyboard_buffer[keyboard_index] = keyboard_ascii;
                 keyboard_index++;
+            }
+            else
+            {
+                putc(keyboard_ascii);
             }
         }
         return;
@@ -308,13 +319,19 @@ void keyboard_key_pressed(uint8_t keyboard_value)
             return;
         else
         {
-            putc(keyboard_ascii);
             if(terminal_flag_keyboard)
             {
-                keyboard_buffer[keyboard_index] = keyboard_ascii;
                 if(keyboard_index > LIMIT)
                     buffer_limit_flag = 1;
+                if(buffer_limit_flag)
+                    return;
+                putc(keyboard_ascii);
+                keyboard_buffer[keyboard_index] = keyboard_ascii;
                 keyboard_index++;
+            }
+            else
+            {
+                putc(keyboard_ascii);
             }
         }
         return;
@@ -329,13 +346,19 @@ void keyboard_key_pressed(uint8_t keyboard_value)
             return;
         else
         {
-            putc(keyboard_ascii);
             if(terminal_flag_keyboard)
             {
-                keyboard_buffer[keyboard_index] = keyboard_ascii;
                 if(keyboard_index > LIMIT)
                     buffer_limit_flag = 1;
+                if(buffer_limit_flag)
+                    return;
+                putc(keyboard_ascii);
+                keyboard_buffer[keyboard_index] = keyboard_ascii;
                 keyboard_index++;
+            }
+            else
+            {
+                putc(keyboard_ascii);
             }
         }
         return;
@@ -349,13 +372,19 @@ void keyboard_key_pressed(uint8_t keyboard_value)
             return;
         else
         {
-            putc(keyboard_ascii);
             if(terminal_flag_keyboard)
             {
-                keyboard_buffer[keyboard_index] = keyboard_ascii;
                 if(keyboard_index > LIMIT)
                     buffer_limit_flag = 1;
+                if(buffer_limit_flag)
+                    return;
+                putc(keyboard_ascii);
+                keyboard_buffer[keyboard_index] = keyboard_ascii;
                 keyboard_index++;
+            }
+            else
+            {
+                putc(keyboard_ascii);
             }
         }
         return;
@@ -406,6 +435,11 @@ keyboard_backspace_key_pressed()
         {
             keyboard_buffer[keyboard_index-1] = '\0';
             keyboard_index--;
+            if(keyboard_index < 128)
+            {
+                terminal_flag_keyboard = 1;
+                buffer_limit_flag = 0;
+            }
         }
         if(keyboard_index <= 0)
             return;

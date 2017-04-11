@@ -1,16 +1,15 @@
 #include "PeachOS_FileSys.h"
 
-int32_t num_directories;
-int32_t num_inodes;
-int32_t num_datablocks;
-
 dentry_t* dirEntries;
 inode_t* inodes;
+uint32_t num_directories;
+uint32_t num_inodes;
+uint32_t num_datablocks;
 uint32_t bbAddr;
 uint32_t dataStart;
 uint32_t fs_ctrl_3;
 
-
+//comment block needed
 void fileSystem_init(uint32_t fsAddr)
 {
   bbAddr = fsAddr;
@@ -21,37 +20,9 @@ void fileSystem_init(uint32_t fsAddr)
   num_inodes = bb->num_inodes;
   num_datablocks = bb->num_datablocks;
 
-  printf("num_directories is %d\n", num_directories);
-  printf("num_inodes is %d\n", num_inodes);
-  printf("num_datablocks is %x\n", num_datablocks);
-
   dirEntries = (dentry_t*)(bb->dirEntries);
   inodes = (inode_t*)(bbAddr + BLOCK_SIZE);
-  dataStart = (uint32_t *)(inodes + num_inodes);
-
-  uint32_t* temp;
-  int i, j;
-  for(j=0;j<17;j++)
-  {
- 	 for(i=0; i<64; i++)
- 	 {
- 	 	temp = *(uint32_t*)(dirEntries[j].filename+i);
- 	 	printf("%c",temp);
- 	 }
- 	 	printf("\n");
-  }
-
-
-  printf("dirEntries is %x\n", (dirEntries+63)->filename);
-  printf("inodes is %x\n", (dirEntries+64)->inode);
-  printf("dataStart is %x\n", dataStart);
-
-  printf("inode is %s\n", dirEntries[0].filename);
-  printf("inode is %s\n", dirEntries[1].filename);
-  printf("inode is %s\n", dirEntries[2].filename);
-  printf("inode is %s\n", dirEntries[3].filename);
-  printf("inode is %s\n", dirEntries[4].filename);
-
+  dataStart = (uint32_t)(inodes + num_inodes);
 }
 
 /*
@@ -87,8 +58,6 @@ int32_t read_dentry_by_name (const uint8_t* fname, dentry_t* dentry)
   return -1;
 }
 
-
-
 /*
  * read_dentry_by_index
  *  DESCRIPTION:
@@ -99,6 +68,7 @@ int32_t read_dentry_by_name (const uint8_t* fname, dentry_t* dentry)
  *  OUTPUT: none
  *  RETURN VALUE: return 0 on sucess, -1 otherwise
 */
+
 int32_t read_dentry_by_index(uint32_t index, dentry_t* dentry)
 {
   if (index >= DIRENTRIES || index < 0)
@@ -146,9 +116,10 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t length
 
  if (file_length == 0 || length == 0)
     return 0;
+
 	//Check if start address is greater than file length
 	if (offset >= file_length)
-		return -1;
+			return -1;
 
 	//make a data block array and get first data block, and first byte index
 	db_array = (inode_t *) bbAddr + num_inodes + 1; //data blocks array
@@ -158,14 +129,13 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t length
 	num_bytes_to_copy = (file_length - 1 < length + offset - 1)? file_length - offset : length;
 	num_db_needed = ((num_bytes_to_copy + db_start_byte_idx - 1)/ BLOCK_SIZE) + 1;
 
-	k = 0; i = db_start_idx; byte_index = db_start_byte_idx;
-  while(i < db_start_idx + num_db_needed){
+	k = 0; byte_index = db_start_byte_idx;
+  for(i = db_start_idx; i < (db_start_idx + num_db_needed); i++){
 
 		byte_array = (char *)(db_array + inode_data_array[i]); //byte array of current data block
     while (byte_index < BLOCK_SIZE && k < num_bytes_to_copy)
 			buf[k++] = byte_array[byte_index++];
     byte_index = 0;
-    i++;
 
 	}
   return num_bytes_to_copy;
@@ -186,12 +156,14 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t length
 */
 int32_t print_directory()
 {
-  printf("Reading data 1.6\n");
+
 	dentry_t toprint;
+	uint8_t printbuffer[NUM_COLS];
+	uint8_t* printpointer;
 	uint8_t file_name_string[FILENAMESIZE+1];
 	uint8_t byte_string[MAX_BYTE_WIDTH];
 	uint8_t formatted_byte_string[MAX_BYTE_WIDTH+1];
-	uint8_t file_type_string[FILE_TYPE_SIZE+1];
+	uint8_t file_type_string[2] = {0};
 
 	int i, j, file_len, byte_len;
 
@@ -206,6 +178,7 @@ int32_t print_directory()
       //number of bytes in the file
 			itoa(*(uint32_t*)(inodes+toprint.inode), (char*)byte_string, 10);
 			itoa(toprint.filetype, (char*)file_type_string, 10); // file type
+
 			byte_len = strlen((char*)(byte_string));
 
 			//format string for printing by filling with spaces
@@ -234,13 +207,29 @@ int32_t print_directory()
 			}
 			formatted_byte_string[MAX_BYTE_WIDTH] = 0x0;
 
-            terminal_write(1, (char*)"file_name: ", 0);
-            terminal_write(1, (char*)file_name_string, 0);
-            terminal_write(1, (char*)", file_type: ", 0);
-            terminal_write(1, (char*)file_type_string, 0);
-            terminal_write(1, (char*)", file_size: ", 0);
-            terminal_write(1, (char*)formatted_byte_string, MAX_BYTE_WIDTH);
-			      terminal_write(1, (char*)"\n", 1);
+			printpointer = printbuffer;
+
+			memcpy(printpointer, "file_name: ", sizeof("file_name: "));
+			printpointer+=sizeof("file_name: ")-1;
+
+			memcpy(printpointer, file_name_string, sizeof(file_name_string));
+			printpointer+=sizeof(file_name_string)-1;
+
+			memcpy(printpointer, ", file_type: ", sizeof(", file_type: "));
+			printpointer+=sizeof(", file_type: ")-1;
+
+			memcpy(printpointer, file_type_string, sizeof(uint8_t));
+			printpointer+=sizeof(uint8_t);
+
+			memcpy(printpointer, ", file_size: ", sizeof(", file_size: "));
+			printpointer+=sizeof(", file_size: ")-1;
+
+			memcpy(printpointer, formatted_byte_string, sizeof(formatted_byte_string));
+			printpointer+=sizeof(formatted_byte_string)-1;
+
+			memcpy(printpointer, "\n", sizeof("\n"));
+
+			terminal_write(1, (char*)printbuffer, sizeof(printbuffer));
 		}
 	}
 	return 0;
@@ -282,19 +271,22 @@ int32_t print_file_by_name(const uint8_t* fname)
 		{
 			printbuf[0] = buf[i];
 			if(printbuf[0] == NULL) printbuf[0] = ' ';
-		    terminal_write(1, (char*)printbuf, 0);
+
+		    terminal_write(1, (char*)printbuf, 1);
 		}
 
 		//copy filename (32 bytes) to file_name (33 bytes, null terminated) for printing
 		strncpy((char*)file_name, (char*)(toprint.filename), FILENAMESIZE);
 
-		terminal_write(1, (char*)"\n", 0);
-		terminal_write(1, (char*)"file_name: ", 0);
-		terminal_write(1, (char*)file_name, 0);
+		terminal_write(1, (char*)"\n", 1);
+		terminal_write(1, (char*)"file_name: ", sizeof("file_name: "));
+		terminal_write(1, (char*)file_name, sizeof(file_name));
+		terminal_write(1, (char*)"\n", 1);
 	}
 	else
 	{
-		terminal_write(1, (char*)"File does not exist.\n", 0);
+		terminal_write(1, (char*)"File does not exist. \n", 0);
+		return -1;
 	}
 
 	return 0;
@@ -315,7 +307,6 @@ int32_t print_file_by_name(const uint8_t* fname)
 */
 int32_t print_file_by_index(uint32_t file_num)
 {
-
 	dentry_t toprint;
 	uint32_t num_bytes_read;
 	uint32_t offset = 0;
@@ -334,19 +325,21 @@ int32_t print_file_by_index(uint32_t file_num)
 		{
 			printbuf[0] = buf[i];
 			if(printbuf[0] == NULL) printbuf[0] = ' ';
-		    terminal_write(1, (char*)printbuf, 0);
+		    terminal_write(1, (char*)printbuf, 1);
 		}
 
 		//copy filename (32 bytes) to file_name (33 bytes, null terminated) for printing
 		strncpy((char*)file_name, (char*)(toprint.filename), FILENAMESIZE);
 
-		terminal_write(1, (char*)"\n", 0);
-		terminal_write(1, (char*)"file_name: ", 0);
-		terminal_write(1, (char*)file_name, 0);
+		terminal_write(1, (char*)"\n", 1);
+		terminal_write(1, (char*)"file_name: ", sizeof("file_name: "));
+		terminal_write(1, (char*)file_name, sizeof(file_name));
+		terminal_write(1, (char*)"\n", 1);
 	}
 	else
 	{
 		terminal_write(1, (char*)"File does not exist.\n", 0);
+		return -1;
 	}
 	return 0;
 }
