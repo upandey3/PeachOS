@@ -4,6 +4,7 @@
 #define ASM     1 /* BORROWED FROM x86_DESC.S */
 #include "x86_desc.h"
 
+
 .global sysCall_handler
 
 /*
@@ -67,72 +68,71 @@ ALL_INTERRUPT_HANDLER(rtc_handler, rtc_input_handler);
 sysCall_handler:
 
   /* mask all interrupts */
-
-  cli
+  cli                               ;\
 
   /* Save all registers and flags, except for SS, ESP & CS
       as they are already saved for us by the processor */
 
-  pushl %fs
-  pushl %es
-  pushl %ds
-  pushal
-  pushfl
+  pushl %fs                     ;\
+  pushl %es                     ;\
+  pushl %ds                     ;\
+  pushal                        ;\
+  pushfl                        ;\
 
   /* Push arguments in resgiters as per Appendix B, arguments
       live in edx, ecx and ebx but all registers are saved
       in order to stop leaking information to other user
       programs */
 
-  pushl %ebp
-  pushl %edi
-  pushl %esi
-  pushl %edx                  /* 3rd argument */
-  pushl %ecx                  /* 2nd argument */
-  pushl %ebx                  /* 1st argument */
+  pushl %ebp                        ;\
+  pushl %edi                        ;\
+  pushl %esi                        ;\
+  pushl %edx                  /* 3rd argument */    ;\
+  pushl %ecx                  /* 2nd argument */    ;\
+  pushl %ebx                  /* 1st argument */    ;\
 
   /* Check to see whether value in eax is valid i.e. whether
       the call number placed in eax by 'int $0x80' is valid
       or not */
 
-  cmpl $1, %eax
-  jl invalid_call             /* if value in eax is less than 1 */
-  cmpl $10, %eax
-  jg invalid_call             /* if value in eax is greater than 10 */
+//  cmpl $1, %eax
+//  jl invalid_call             /* if value in eax is less than 1 */
+  subl $1, %eax                      ;\
+  cmpl $10, %eax                    ;\
+  ja invalid_call             /* if value in eax is greater than 10 */  ;\
 
   /* if call number is valid then unmask interrupts and
       call the corresponding C function from the jump table */
 
-  sti
+  sti                                   ;\
 
-  call   *sysCall_jumpTable(,%eax,4)
+  call   *sysCall_jumpTable(,%eax,4)        ;\
 
   /* mask all interrupts again and begin restoring registers */
 
-  cli
+  cli                       ;\
 
   /* restore all 6 registers (arguments), assuming they each hold 4 bytes */
 
 restore_all:
-  addl $24, %esp
+  addl $24, %esp                ;\
 
   /* restore all flags and registers in the correct order */
 
-  popfl
-  popal
-  popl %ds
-  popl %es
-  popl %fs
+  popfl                 ;\
+  popal                 ;\
+  popl %ds              ;\
+  popl %es              ;\
+  popl %fs              ;\
 
   /* unmask all interrupts and call iret */
 
-  sti
-
-  iret
+  sti                   ;\
+  iret                  ;\
 
 invalid_call:
-  movl $-1, %eax
-  jmp  restore_all
+  movl $-1, %eax        ;\
+  jmp  restore_all      ;\
 
 sysCall_jumpTable:
   .long halt, execute, read, write, open, close, getargs, vidmap, set_handler, sigreturn

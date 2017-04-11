@@ -14,6 +14,8 @@
 #include "PeachOS_RTC.h"
 #include "PeachOS_Terminal.h"
 #include "PeachOS_FileSys.h"
+#include "PeachOS_SystemCalls.h"
+#include "PeachOS_SystemCall_Test.h"
 
 /* Macros. */
 /* Check if the bit BIT in FLAGS is set. */
@@ -59,7 +61,7 @@ entry (unsigned long magic, unsigned long addr)
 		int mod_count = 0;
 		int i;
 		module_t* mod = (module_t*)mbi->mods_addr;
-		
+
 		//Assumes that the file system is the first module in list!!! Double check this
 		fileSystem_init(mod->mod_start);
 
@@ -179,7 +181,7 @@ entry (unsigned long magic, unsigned long addr)
 	terminal_init();
 
 	/* Execute the first program (`shell') ... */
-
+	call_sys_halt(2);
 	/* Spin (nicely, so we don't chew up cycles) */
 	asm volatile(".1: hlt; jmp .1;");
 }

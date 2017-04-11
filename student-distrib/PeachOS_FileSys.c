@@ -41,24 +41,24 @@ void fileSystem_init(uint32_t fsAddr)
 
 int32_t read_dentry_by_name (const uint8_t* fname, dentry_t* dentry)
 {
-  int i;
-  int len = strlen((int8_t*)(fname));
-  if (len > FILENAMESIZE)
+    int i;
+    int len = strlen((int8_t*)(fname));
+    if (len > FILENAMESIZE)
 	{
 		return -1;
 	}
 
-  for (i = 0; i < DIRENTRIES; i++)
-  {
-    if ((strncmp(dirEntries[i].filename,  (int8_t*)(fname), len)) == 0)
+    for (i = 0; i < DIRENTRIES; i++)
     {
-       strncpy(dentry->filename, dirEntries[i].filename, len);
-       dentry->filetype = dirEntries[i]. filetype;
-       dentry->inode = dirEntries[i].inode;
-       return 0;
+        if ((strncmp(dirEntries[i].filename,  (int8_t*)(fname), len)) == 0)
+        {
+           strncpy(dentry->filename, dirEntries[i].filename, len);
+           dentry->filetype = dirEntries[i]. filetype;
+           dentry->inode = dirEntries[i].inode;
+           return 0;
+        }
     }
-  }
-  return -1;
+    return -1;
 }
 
 /*
@@ -228,10 +228,10 @@ int32_t print_directory()
 			memcpy(printpointer, ", file_size: ", sizeof(", file_size: "));
 			printpointer+=sizeof(", file_size: ")-1;
 
-			memcpy(printpointer, formatted_byte_string, sizeof(formatted_byte_string));	
+			memcpy(printpointer, formatted_byte_string, sizeof(formatted_byte_string));
 			printpointer+=sizeof(formatted_byte_string)-1;
 
-			memcpy(printpointer, "\n", sizeof("\n"));		
+			memcpy(printpointer, "\n", sizeof("\n"));
 
 			terminal_write(1, (char*)printbuffer, sizeof(printbuffer));
 		}
