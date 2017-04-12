@@ -13,7 +13,7 @@
 
 typedef struct {
     uint32_t *file_jumptable;
-    int32_t inode;
+    int32_t inode = -1;
     int32_t file_position;
     int32_t flags;
 } file_descriptor_t;

@@ -1,9 +1,8 @@
-
 #include "PeachOS_SystemCall_Test.h"
 
 int32_t call_sys_halt(uint8_t status)
 {
-    asm volatiel(
+    asm volatile(
     "                       \n\
     movl $1, %%eax          \n\
     movl $3, %%ebx          \n\
