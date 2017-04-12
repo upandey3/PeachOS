@@ -13,7 +13,6 @@
 
 
 
-
 /*
  * Taken from tuxctl-ld.c
 */

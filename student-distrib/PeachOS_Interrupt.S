@@ -22,25 +22,13 @@
  *          Refer Section: Keyboard interrupt handling function
 */
 #define ALL_INTERRUPT_HANDLER(interrupt_name, call_interrupt_handler)   \
-.GLOBL interrupt_name               ;\
-interrupt_name:                     ;\
-
-  cli                             ;\
-
+.GLOBL interrupt_name             ;\
+interrupt_name:                   ;\
   pushal                          ;\
   pushfl                          ;\
-
-  sti                             ;\
-
   call call_interrupt_handler     ;\
-
-  cli                             ;\
-
   popfl                           ;\
   popal                           ;\
-
-  sti                             ;\
-
   iret                            ;\
 
 /* RTC and Keyboard input hanndlers called now */
@@ -64,7 +52,6 @@ ALL_INTERRUPT_HANDLER(rtc_handler, rtc_input_handler);
  *           https://en.wikibooks.org/wiki/X86_Assembly/Interfacing_with_Linux
  *
 */
-
 sysCall_handler:
 
   /* mask all interrupts */
@@ -135,4 +122,4 @@ invalid_call:
   jmp  restore_all      ;\
 
 sysCall_jumpTable:
-  .long halt, execute, read, write, open, close, getargs, vidmap, set_handler, sigreturn
+  .long SYS_HALT, SYS_EXECUTE, SYS_READ, SYS_WRITE, SYS_OPEN, SYS_CLOSE, SYS_GETARGS, SYS_VIDMAP, SYS_SET_HANDLER, SYS_SIGRETURN

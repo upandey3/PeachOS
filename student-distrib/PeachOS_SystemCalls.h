@@ -1,10 +1,10 @@
+
 #ifndef _SYSTEMCALLS_H
 #define _SYSTEMCALLS_H
 
-#include "PeachOS_Terminal.h"
-#include "PeachOS_RTC.h"
-#include "PeachOS_FileSys.h"
-#include "lib.c"
+#include "types.h"
+#include "x86_desc.h"
+
 
 #define MAX_OPEN_FILES 8
 #define MAX_FILENAME_SIZE 32
@@ -23,10 +23,31 @@
 #define CLOSE 3
 #define argsize 100
 
+
+/* Function Pointers for File Descriptor jump_table */
+
+/* Struct: jump_table_ops
+ *    fd_read: Function Pointer that points to the corresponding read function
+ *	  fd_write: Function Pointer that points to the corresponding write function
+ * 	  fd_open: Function Pointer that points to the corresponding open function
+ *	  fd_close: Function Pointer that points to the corresponding close function
+ *
+ * SOURCE : http://stackoverflow.com/questions/9932212/jump-table-examples-in-c
+ *          http://www.sanfoundry.com/c-tutorials-jump-tables/
+ *          http://www.microchip.com/forums/m798465.aspx
+*/
+typedef struct {
+    int32_t (*fd_open)(const void* fname);
+    int32_t (*fd_read)(int32_t fd, void* buffer, int32_t nbytes);
+    int32_t (*fd_write)(int32_t fd, const void* buffer, int32_t nbytes);
+    int32_t (*fd_close)(int32_t fd);
+} jump_table_ops;
+
+
 /* File Descriptor Struct */
 
 typedef struct {
-    uint32_t *file_jumptable;
+    jump_table_ops file_jumptable;
     int32_t inode;
     int32_t file_position;
     int32_t flags;
@@ -53,18 +74,19 @@ typedef struct {
 
 /*** SYSTEM CALLS ***/
 
-int32_t halt(uint8_t status);
-int32_t execute(const uint8_t* command);
-int32_t read(int32_t fd, void* buf, int32_t nbytes);
-int32_t write(int32_t fd, const void* buf, int32_t nbytes);
-int32_t open(const uint8_t* filename);
-int32_t close(int32_t fd);
-int32_t getargs(uint8_t* buf, int32_t nbytes);
-int32_t vidmap(uint8_t** screen_start);
-int32_t set_handler(int32_t signum, void* handler_address);
-int32_t sigreturn(void);
+int32_t SYS_HALT(uint8_t status);
+int32_t SYS_EXECUTE(const uint8_t* command);
+int32_t SYS_READ(int32_t fd, void* buf, int32_t nbytes);
+int32_t SYS_WRITE(int32_t fd, const void* buf, int32_t nbytes);
+int32_t SYS_OPEN(const uint8_t* filename);
+int32_t SYS_CLOSE(int32_t fd);
+int32_t SYS_GETARGS(uint8_t* buf, int32_t nbytes);
+int32_t SYS_VIDMAP(uint8_t** screen_start);
+int32_t SYS_SET_HANDLER(int32_t signum, void* handler_address);
+int32_t SYS_SIGRETURN(void);
 
 /*** HELPER FUNCTIONS ***/
-pcb_t * get_curr_pcb(){
+pcb_t * get_curr_pcb();
+int32_t dummy_function();
 
 #endif

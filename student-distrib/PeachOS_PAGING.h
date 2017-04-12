@@ -1,6 +1,8 @@
 #ifndef _PAGING_H
 #define _PAGING_H
 
+#include "types.h"
+
 #define ONE_K			  1024
 #define FOUR_K			  4096
 
@@ -16,7 +18,7 @@ typedef struct page_directory {
 			uint32_t reserved : 1;
 			uint32_t page_size : 1;
 			uint32_t global_page : 1;
-			uint32_t available : 3;			
+			uint32_t available : 3;
 			uint32_t PTBA : 20;	//page table base address
 		} __attribute__((packed));
 } page_directory_t;
@@ -33,7 +35,7 @@ typedef struct page_table {
 			uint32_t reserved : 1;
 			uint32_t page_size : 1;
 			uint32_t global_page : 1;
-			uint32_t available : 3;			
+			uint32_t available : 3;
 			uint32_t PBA : 20;	//page table base address
 		} __attribute__((packed));
 } page_table_t;
