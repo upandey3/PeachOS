@@ -244,7 +244,7 @@ void keyboard_key_pressed(uint8_t keyboard_value)
             clear_screen();
             // Read File by Name
             uint8_t * char_array;
-            char array[100] = "frame0.txt";
+            char array[100] = "verylargetextwithverylongname.tx";
             char_array = (uint8_t* )array;
             print_file_by_name(char_array);
         }
@@ -253,8 +253,9 @@ void keyboard_key_pressed(uint8_t keyboard_value)
             clear_screen();
 
             // Read File by Index
-            if(file_index<0 || file_index>16) file_index = 0;
-            print_file_by_index(file_index++);
+            if (fs_ctrl_3 < 0 || fs_ctrl_3 > 16)
+              fs_ctrl_3 = 0;
+            print_file_by_index(fs_ctrl_3++);
         }
         if(keyboard_ascii == '4')
         {
