@@ -12,6 +12,8 @@
  * Below consists of the initializing the file operation tables for certain file descriptors,
  * whenever we open a file, we make the file_jumptable pointer point to these arrays
  * SOURCE : http://stackoverflow.com/questions/9932212/jump-table-examples-in-c
+ *          http://stackoverflow.com/questions/252748/how-can-i-use-an-array-of-function-pointers
+ *          http://www.geeksforgeeks.org/function-pointer-in-c/
  */
 
 /* stdin, file operation table */
@@ -54,28 +56,70 @@ int32_t SYS_HALT(uint8_t status)
 */
 int32_t SYS_EXECUTE(const uint8_t* command)
 {
-  /*
     // using these two temp variables for getting filesize
     uint32_t size_file_name = 0;
     uint8_t file_name[32] = {'\0'};
-    uint32_t i = 0;
-    uint32_t read_file = 0;
-
+    uint8_t arg_buffer[100] = {'\0'};
+    uint8_t executable_check[4] = {ASCII_DEL, ASCII_E, ASCII_L, ASCII_F}; // del E L F stored in the buffer
+    uint8_t executable_temp_buf[4];
+    uint32_t i, j, k;
+    i = 0;
+    j = 0;
+    k = 0;
     dentry_t dir_entry;
 
-    // iterating the passed argument array to get the size of "filename"
-    while(i < 32 && command[i] != ' ')
-    {
-        file_name[i] = filename[i];
+    while(i < TERMINAL_BUFSIZE && command[i] == ' ') // increment I to get to the filename
         i++;
-        size_file_name++;
+
+    j = i; // for example- filename starts after 49 spaces, j = i = 49.
+    // iterating the passed argument array to get the size of "filename"
+    while((i-j) < 32 && command[i] != ' ' && command[i] != '\0' && command[i] != '\n')
+    {
+        file_name[(i-j)] = command[i]; // OPEN FILE WITH THIS
+        i++;
+        size_file_name++; // so when iterating through, we do (51-49) = (i - j) = 2, file size
+    }
+    file_name[(i=j)] = '\0'; // make the last charcter NULL
+
+    while(i < TERMINAL_BUFSIZE && command[i] == ' ' && command[i] != '\0' && command[i] != '\n')
+        i++; // get to the start of the argument
+
+    while(i < TERMINAL_BUFSIZE && command[i] != '\0' && command[i] != '\n')
+    {
+        arg_buffer[k] = command[i]; // SEND TO THE GETARGS
+        k++;
+        i++;
     }
 
-    if(read_dentry_by_name(file_name, &dir_entry) == -1); // find the dir_entry from the file system
+    /*
+	 * Read the file, fill in the dir_entry
+	 * Use the inode to send to read_data function to get the first four bytes
+     * We need to check if they are DEL E L F
+	 */
+    if(read_dentry_by_name(file_name, &dir_entry) == -1) // find the dir_entry from the file system
+    {
         terminal_write(1, "Didn't work", sizeof("Didn't work"));
+        return -1;
+    }
     else
+    {
         terminal_write(1, "Worked", sizeof("Worked"));
- */
+        terminal_write(1, (uint8_t *)file_name, size_file_name);
+
+        // get the first four characters read from the file, if they are ELF then its executable
+        if(read_data(dir_entry.inode, 0, executable_temp_buf, 4) == -1)
+    	{
+    		return -1;
+    	}
+    	/* Checking to see if it's executable, strcmp == 0 means they are same, another number means they are not */
+    	if(strncmp((const int8_t*)executable_temp_buf, (const int8_t*)executable_check, 4) != 0)
+    	{
+    		return -1;
+    	}
+    }
+    
+    // STDIN  AND STDOUT SET UP, ONCE PCB IS LOCATED
+
     return 0;
 }
 
@@ -293,7 +337,10 @@ int32_t SYS_SIGRETURN(void)
  *
  * Output: Address in Kernel space to start putting our PCB info
  *
- * Source:
+ * Source: https://www.usna.edu/Users/cs/aviv/classes/ic221/s16/lec/21/lec.html
+ *         http://proquest.safaribooksonline.com/book/operating-systems-and-server-administration/linux/0596005652/3dot-processes/understandlk-chp-3-sect-2?bookview=search&query=Process%20Control%20Block
+ *         https://www.tutorialspoint.com/operating_system/os_processes.htm
+ *         https://www.slideshare.net/imdadmanik/03-processes
 */
 pcb_t * get_curr_pcb()
 {

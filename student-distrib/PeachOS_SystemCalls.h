@@ -22,6 +22,10 @@
 #define WRITE 2
 #define CLOSE 3
 #define argsize 100
+#define ASCII_DEL 0x7f
+#define ASCII_E 0x45
+#define ASCII_L 0x4C
+#define ASCII_F 0x46
 
 
 /* Function Pointers for File Descriptor jump_table */
