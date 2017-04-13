@@ -4,6 +4,7 @@
 #define ASM     1 /* BORROWED FROM x86_DESC.S */
 #include "x86_desc.h"
 
+
 .global sysCall_handler
 
 /*
@@ -20,26 +21,15 @@
  *  SOURCE: http://arjunsreedharan.org/post/99370248137/kernel-201-lets-write-a-kernel-with-keyboard
  *          Refer Section: Keyboard interrupt handling function
 */
+
 #define ALL_INTERRUPT_HANDLER(interrupt_name, call_interrupt_handler)   \
-.GLOBL interrupt_name               ;\
-interrupt_name:                     ;\
-
-  cli                             ;\
-
+.GLOBL interrupt_name             ;\
+interrupt_name:                   ;\
   pushal                          ;\
   pushfl                          ;\
-
-  sti                             ;\
-
   call call_interrupt_handler     ;\
-
-  cli                             ;\
-
   popfl                           ;\
   popal                           ;\
-
-  sti                             ;\
-
   iret                            ;\
 
 /* RTC and Keyboard input hanndlers called now */
@@ -63,7 +53,6 @@ ALL_INTERRUPT_HANDLER(rtc_handler, rtc_input_handler);
  *           https://en.wikibooks.org/wiki/X86_Assembly/Interfacing_with_Linux
  *
 */
-
 sysCall_handler:
 
   /* mask all interrupts */
@@ -95,10 +84,9 @@ sysCall_handler:
       the call number placed in eax by 'int $0x80' is valid
       or not */
 
-  cmpl $1, %eax
-  jl invalid_call             /* if value in eax is less than 1 */
+  subl $1, %eax
   cmpl $10, %eax
-  jg invalid_call             /* if value in eax is greater than 10 */
+  ja invalid_call             /* if value in eax is greater than 10 */
 
   /* if call number is valid then unmask interrupts and
       call the corresponding C function from the jump table */
@@ -127,7 +115,6 @@ restore_all:
   /* unmask all interrupts and call iret */
 
   sti
-
   iret
 
 invalid_call:
@@ -135,4 +122,4 @@ invalid_call:
   jmp  restore_all
 
 sysCall_jumpTable:
-  .long halt, execute, read, write, open, close, getargs, vidmap, set_handler, sigreturn
+  .long SYS_HALT, SYS_EXECUTE, SYS_READ, SYS_WRITE, SYS_OPEN, SYS_CLOSE, SYS_GETARGS, SYS_VIDMAP, SYS_SET_HANDLER, SYS_SIGRETURN

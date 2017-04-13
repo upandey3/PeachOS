@@ -1,22 +1,19 @@
 #include "PeachOS_FileSys.h"
-//test
-uint32_t file_index;
 
-bootblock_t BootBlock;
 dentry_t* dirEntries;
 inode_t* inodes;
-
 uint32_t num_directories;
 uint32_t num_inodes;
 uint32_t num_datablocks;
 uint32_t bbAddr;
 uint32_t dataStart;
-
+uint32_t fs_ctrl_3;
 
 //comment block needed
 void fileSystem_init(uint32_t fsAddr)
 {
   bbAddr = fsAddr;
+  printf("fsAddr is %d", fsAddr);
   bootblock_t* bb = (bootblock_t*)(bbAddr);
 
   num_directories = bb->num_directories;
@@ -85,6 +82,9 @@ int32_t read_dentry_by_index(uint32_t index, dentry_t* dentry)
   return 0;
 }
 
+
+
+
 /*
  * read_data
  *  DESCRIPTION:
@@ -98,48 +98,43 @@ int32_t read_dentry_by_index(uint32_t index, dentry_t* dentry)
  *  OUTPUT: none
  *  RETURN VALUE: returns the number of bytes read and placed in buf, -1 otherwise
 */
-
 int32_t read_data(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t length)
 {
 	int i, k;
-	uint32_t file_length, db_start_idx, db_start_byte_idx,
-	num_bytes_to_copy, num_db_needed, byte_index;
-	char * byte_array;
-	inode_t * db_array;
-  	inode_t * dest_inode;
-	uint32_t * inode_data_array;
+  uint32_t file_length, db_start_idx, db_start_byte_idx;
+	uint32_t num_bytes_to_copy, num_db_needed, byte_index, * inode_data_array;
+	char * byte_array; inode_t * db_array, * dest_inode;
 
-	//Checking if inode is invalid (if the index is greater than N - 1)
+  //Checking if inode is invalid (if the index is greater than N - 1)
 	if (inode >= num_inodes)
 		return -1;
+
 	dest_inode = inodes + inode; //points to the inode
-	//make an array of data block indices
-	inode_data_array = (uint32_t *)dest_inode;
-	file_length = inode_data_array[0];//first index
+	inode_data_array = (uint32_t *)dest_inode; //make an array of data block indices
+  file_length = inode_data_array[0];//first index is file length
 	inode_data_array += 1;
 
-	if(file_length == 0 || length == 0) return 0;
+ if (file_length == 0 || length == 0)
+    return 0;
 
 	//Check if start address is greater than file length
 	if (offset >= file_length)
-	{
 			return -1;
-	}
 
 	//make a data block array and get first data block, and first byte index
-	db_array = (inode_t *) bbAddr + num_inodes + 1;
-	db_start_idx = offset / (BLOCK_SIZE); // CHANGE MADE
-	db_start_byte_idx = offset % (BLOCK_SIZE); // CHANGE MADE
+	db_array = (inode_t *) bbAddr + num_inodes + 1; //data blocks array
+	db_start_idx = offset / (BLOCK_SIZE); // starting data block index
+  db_start_byte_idx = offset % (BLOCK_SIZE); // starting byte index of data block
 
-	num_bytes_to_copy = (file_length - 1 <= length + offset - 1)? file_length - offset : length;
+	num_bytes_to_copy = (file_length - 1 < length + offset - 1)? file_length - offset : length;
 	num_db_needed = ((num_bytes_to_copy + db_start_byte_idx - 1)/ BLOCK_SIZE) + 1;
 
-	k = 0; i = db_start_idx; byte_index = db_start_byte_idx; // 5
-  for ( ; i < db_start_idx + num_db_needed; i++){
-		byte_array = (char *)(db_array + inode_data_array[i]); // get the byte array of the db
-		while (byte_index < BLOCK_SIZE && k < num_bytes_to_copy){
+	k = 0; byte_index = db_start_byte_idx;
+  for(i = db_start_idx; i < (db_start_idx + num_db_needed); i++){
+
+		byte_array = (char *)(db_array + inode_data_array[i]); //byte array of current data block
+    while (byte_index < BLOCK_SIZE && k < num_bytes_to_copy)
 			buf[k++] = byte_array[byte_index++];
-		}
     byte_index = 0;
 
 	}
@@ -161,8 +156,8 @@ int32_t read_data(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t length
 */
 int32_t print_directory()
 {
-	dentry_t toprint;
 
+	dentry_t toprint;
 	uint8_t printbuffer[NUM_COLS];
 	uint8_t* printpointer;
 	uint8_t file_name_string[FILENAMESIZE+1];
@@ -176,12 +171,14 @@ int32_t print_directory()
 	{
 		if(read_dentry_by_index(i, &toprint)==0)
 		{
-			//get the number of bytes in each file and the file name length
+			//get the file name length
 			file_len = strlen((char*)(toprint.filename));
-			if(file_len > 32) file_len = 32;
+			if(file_len > FILENAMESIZE) file_len = FILENAMESIZE;
 
+      //number of bytes in the file
 			itoa(*(uint32_t*)(inodes+toprint.inode), (char*)byte_string, 10);
-			itoa(toprint.filetype, (char*)file_type_string, 10);
+			itoa(toprint.filetype, (char*)file_type_string, 10); // file type
+
 			byte_len = strlen((char*)(byte_string));
 
 			//format string for printing by filling with spaces
@@ -210,7 +207,6 @@ int32_t print_directory()
 			}
 			formatted_byte_string[MAX_BYTE_WIDTH] = 0x0;
 
-
 			printpointer = printbuffer;
 
 			memcpy(printpointer, "file_name: ", sizeof("file_name: "));
@@ -228,10 +224,10 @@ int32_t print_directory()
 			memcpy(printpointer, ", file_size: ", sizeof(", file_size: "));
 			printpointer+=sizeof(", file_size: ")-1;
 
-			memcpy(printpointer, formatted_byte_string, sizeof(formatted_byte_string));	
+			memcpy(printpointer, formatted_byte_string, sizeof(formatted_byte_string));
 			printpointer+=sizeof(formatted_byte_string)-1;
 
-			memcpy(printpointer, "\n", sizeof("\n"));		
+			memcpy(printpointer, "\n", sizeof("\n"));
 
 			terminal_write(1, (char*)printbuffer, sizeof(printbuffer));
 		}
@@ -275,6 +271,7 @@ int32_t print_file_by_name(const uint8_t* fname)
 		{
 			printbuf[0] = buf[i];
 			if(printbuf[0] == NULL) printbuf[0] = ' ';
+
 		    terminal_write(1, (char*)printbuf, 1);
 		}
 
@@ -308,11 +305,9 @@ int32_t print_file_by_name(const uint8_t* fname)
  *  OUTPUT: none
  *  RETURN VALUE: returns the number of bytes read and placed in buf, -1 otherwise
 */
-
 int32_t print_file_by_index(uint32_t file_num)
 {
 	dentry_t toprint;
-
 	uint32_t num_bytes_read;
 	uint32_t offset = 0;
 	uint32_t length = 37600; //larger than largest file in system. Can be changed as needed
@@ -444,7 +439,7 @@ int32_t read_directory(int32_t fd, void * buf, int32_t nbytes){
 /*
  * write_directory
  *  DESCRIPTION:
- *          This function uses the file descriptorto access a directory
+ *          This function uses the file descriptor to access a directory
  * 				  and write to it from buf
  *  INPUT: fd = the file descriptor
  *				 buf - the array/buffer to read from and write into the directory
