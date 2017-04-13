@@ -1,11 +1,8 @@
 
 #ifndef _SYSTEMCALLS_H
 #define _SYSTEMCALLS_H
-
 #include "types.h"
 #include "x86_desc.h"
-
-
 #define MAX_OPEN_FILES 8
 #define MAX_FILENAME_SIZE 32
 #define LOWER_13_BITS_MASK 0xFFFFE000
@@ -27,9 +24,7 @@
 #define ASCII_L 0x4C
 #define ASCII_F 0x46
 
-
 /* Function Pointers for File Descriptor jump_table */
-
 /* Struct: jump_table_ops
  *    fd_read: Function Pointer that points to the corresponding read function
  *	  fd_write: Function Pointer that points to the corresponding write function
@@ -47,9 +42,7 @@ typedef struct {
     int32_t (*fd_close)(int32_t fd);
 } jump_table_ops;
 
-
 /* File Descriptor Struct */
-
 typedef struct {
     jump_table_ops file_jumptable;
     int32_t inode;
@@ -58,8 +51,6 @@ typedef struct {
 } file_descriptor_t;
 
 /* Process Control Block Struct */
-
-
 typedef struct {
     file_descriptor_t open_files[MAX_OPEN_FILES];
     uint8_t filenames[MAX_OPEN_FILES][MAX_FILENAME_SIZE];
@@ -71,13 +62,11 @@ typedef struct {
     uint32_t parent_stack_pointer;
     uint32_t parent_base_pointer;
     uint8_t state;
-    unsigned int timeslice;
+    uint8_t timeslice;
 } pcb_t;
 
 /* FUNCTION DECLARATIONS */
-
 /*** SYSTEM CALLS ***/
-
 int32_t SYS_HALT(uint8_t status);
 int32_t SYS_EXECUTE(const uint8_t* command);
 int32_t SYS_READ(int32_t fd, void* buf, int32_t nbytes);
@@ -88,9 +77,9 @@ int32_t SYS_GETARGS(uint8_t* buf, int32_t nbytes);
 int32_t SYS_VIDMAP(uint8_t** screen_start);
 int32_t SYS_SET_HANDLER(int32_t signum, void* handler_address);
 int32_t SYS_SIGRETURN(void);
-
 /*** HELPER FUNCTIONS ***/
 pcb_t * get_curr_pcb();
 int32_t dummy_function();
+pcb_t * pcb_init();
 
 #endif

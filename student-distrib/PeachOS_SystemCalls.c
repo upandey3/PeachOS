@@ -7,7 +7,7 @@
 #include "PeachOS_Terminal.h"
 #include "PeachOS_FileSys.h"
 #include "PeachOS_SystemCalls.h"
-
+#define _8KB 0x800
 /*
  * Below consists of the initializing the file operation tables for certain file descriptors,
  * whenever we open a file, we make the file_jumptable pointer point to these arrays
@@ -15,23 +15,16 @@
  *          http://stackoverflow.com/questions/252748/how-can-i-use-an-array-of-function-pointers
  *          http://www.geeksforgeeks.org/function-pointer-in-c/
  */
-
 /* stdin, file operation table */
 jump_table_ops stdin_table = {terminal_open, terminal_read, dummy_function, terminal_close};
-
 /* stdout, file operation table */
 jump_table_ops stdout_table = {terminal_open, dummy_function, terminal_write, terminal_close};
-
 /* rtc, file operation table */
 jump_table_ops rtc_table = {rtc_open, rtc_read, rtc_write, rtc_close};
-
 /* file, file operation table */
 jump_table_ops file_table = {open_file, read_file, write_file, close_file};
-
 /* directory, file operation table */
 jump_table_ops directory_table = {open_directory, read_directory, write_directory, close_directory};
-
-
 /* System_Call : HALT
  *
  * System_Call_Input: Status
@@ -45,7 +38,6 @@ int32_t SYS_HALT(uint8_t status)
     printf("Worked\n");
     return 0;
 }
-
 /* System_Call : EXECUTE
  *
  * System_Call_Input: Command, buffer that holds filename and arguments.
@@ -67,10 +59,8 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     j = 0;
     k = 0;
     dentry_t dir_entry;
-
     while(i < TERMINAL_BUFSIZE && command[i] == ' ') // increment I to get to the filename
         i++;
-
     j = i; // for example- filename starts after 49 spaces, j = i = 49.
     // iterating the passed argument array to get the size of "filename"
     while((i-j) < 32 && command[i] != ' ' && command[i] != '\0' && command[i] != '\n')
@@ -80,17 +70,14 @@ int32_t SYS_EXECUTE(const uint8_t* command)
         size_file_name++; // so when iterating through, we do (51-49) = (i - j) = 2, file size
     }
     file_name[(i=j)] = '\0'; // make the last charcter NULL
-
     while(i < TERMINAL_BUFSIZE && command[i] == ' ' && command[i] != '\0' && command[i] != '\n')
         i++; // get to the start of the argument
-
     while(i < TERMINAL_BUFSIZE && command[i] != '\0' && command[i] != '\n')
     {
         arg_buffer[k] = command[i]; // SEND TO THE GETARGS
         k++;
         i++;
     }
-
     /*
 	 * Read the file, fill in the dir_entry
 	 * Use the inode to send to read_data function to get the first four bytes
@@ -105,9 +92,8 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     {
         terminal_write(1, "Worked", sizeof("Worked"));
         terminal_write(1, (uint8_t *)file_name, size_file_name);
-
-        // get the first four characters read from the file, if they are ELF then its executable
-        if(read_data(dir_entry.inode, 0, executable_temp_buf, 4) == -1)
+      // get the first four characters read from the file, if they are ELF then its executable
+      if(read_data(dir_entry.inode, 0, executable_temp_buf, 4) == -1)
     	{
     		return -1;
     	}
@@ -117,12 +103,8 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     		return -1;
     	}
     }
-    
-    // STDIN  AND STDOUT SET UP, ONCE PCB IS LOCATED
-
     return 0;
 }
-
 /* System_Call : READ
  *
  * System_Call_Input: fd, buf, nbytes
@@ -144,7 +126,6 @@ int32_t SYS_READ(int32_t fd, void* buf, int32_t nbytes)
     else
         return curr_pcb->open_files[fd].file_jumptable.fd_read(fd, (uint8_t *)buf, nbytes);
 }
-
 /* System_Call : WRITE
  *
  * System_Call_Input: fd, buf, nbytes
@@ -166,7 +147,6 @@ int32_t SYS_WRITE(int32_t fd, const void* buf, int32_t nbytes)
     else
         return curr_pcb->open_files[fd].file_jumptable.fd_write(fd, buf, nbytes);
 }
-
 /* System_Call : OPEN
  *
  * System_Call_Input: filename
@@ -183,14 +163,12 @@ int32_t SYS_OPEN(const uint8_t* filename)
     uint32_t i = 0;
     uint32_t j = 0;
     dentry_t dir_entry;
-
     // iterating the passed argument array to get the size of "filename"
     while(i < MAX_FILENAME_SIZE && filename[i] != ' ')
     {
         fname[i] = filename[i];
         i++;
     }
-
     pcb_t *curr_pcb = get_curr_pcb();
     // find the dir_entry from the file system
     if (read_dentry_by_name(fname, &dir_entry) == -1)
@@ -216,7 +194,6 @@ int32_t SYS_OPEN(const uint8_t* filename)
             }
         }
     }
-
     switch (dir_entry.filetype)
     {
         case FILE:
@@ -242,7 +219,6 @@ int32_t SYS_OPEN(const uint8_t* filename)
      }
     return i;
 }
-
 /* System_Call : CLOSE
  *
  * System_Call_Input: fd
@@ -257,7 +233,6 @@ int32_t SYS_CLOSE(int32_t fd)
     // int i = 0;
     // uint8_t fname[MAX_FILENAME_SIZE]; // UNUSED
     pcb_t * curr_pcb = get_curr_pcb();
-
     if (fd < FIRST_FD || fd > LAST_FD || curr_pcb->open_files[fd].flags == AVAILABLE)
         return -1;
     else
@@ -268,7 +243,6 @@ int32_t SYS_CLOSE(int32_t fd)
     }
     return 0;
 }
-
 /* System_Call : GETARGS
  *
  * System_Call_Input: buf, nbytes
@@ -283,15 +257,12 @@ int32_t SYS_GETARGS(uint8_t* buf, int32_t nbytes)
 {
     if (!buf || !nbytes)
         return -1;
-
     pcb_t * curr_pcb = get_curr_pcb();
     if (nbytes < strlen((const int8_t *)curr_pcb->args))
         return -1;
-
     strcpy((int8_t *)buf, (const int8_t *)curr_pcb->args);
     return 0;
 }
-
 /* System_Call : VIDMAP
  *
  * System_Call_Input: screen_start
@@ -304,7 +275,6 @@ int32_t SYS_VIDMAP(uint8_t** screen_start)
 {
     return -1;
 }
-
 /* System_Call : SET_HANDLER
  *
  * System_Call_Input: signum, handler_address
@@ -317,7 +287,6 @@ int32_t SYS_SET_HANDLER(int32_t signum, void* handler_address)
 {
     return -1;
 }
-
 /* System_Call : SIGRETURN
  *
  * System_Call_Input: void
@@ -330,7 +299,6 @@ int32_t SYS_SIGRETURN(void)
 {
     return -1;
 }
-
 /* get_curr_pcb
  *
  * Input: NONE
@@ -354,7 +322,6 @@ pcb_t * get_curr_pcb()
         );
     return ret;
 }
-
 /*
  * dummy_function(void)
  *
@@ -368,3 +335,27 @@ pcb_t * get_curr_pcb()
  {
     return -1;
  }
+/*
+ * pcb_init()
+ *
+ * This function initializes
+ * a pcb every time a new process
+ * is created
+ *
+ * Inputs: none
+ * Outputs: returns pointer to the initialized pcb
+ */
+pcb_t * pcb_init(uint32_t curr_esp, uint32_t curr_ebp)
+{
+  pcb_t * curr_pcb = get_curr_pcb();
+  curr_pcb->open_files[0].file_jumptable = stdin_table;
+  curr_pcb->open_files[1].file_jumptable = stdout_table;
+  curr_pcb->process_id = -1;
+  //curr_pcb->args[] = {'\0'};
+  curr_pcb->stack_pointer = curr_ebp - _8KB;
+  curr_pcb->base_pointer = curr_ebp - _8KB;
+  curr_pcb->parent_process_id = -2;
+  curr_pcb->parent_stack_pointer = curr_esp;
+  curr_pcb->parent_base_pointer = curr_ebp;
+  return curr_pcb;
+}
