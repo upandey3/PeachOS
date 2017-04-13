@@ -71,7 +71,7 @@ sysCall_handler:
       or not */
   subl $1, %eax
   cmpl $10, %eax
-  ja invalid_call             /* if value in eax is greater than 10 */
+  jae invalid_call             /* if value in eax is greater than 10 */
   /* if call number is valid then unmask interrupts and
       call the corresponding C function from the jump table */
   sti
@@ -81,17 +81,21 @@ sysCall_handler:
   /* restore all 6 registers (arguments), assuming they each hold 4 bytes */
 restore_all:
   addl $24, %esp
+  movl %eax, restore_eax
   /* restore all flags and registers in the correct order */
   popfl
   popal
-  popl %ds
+  popl %ds // FIX HERE
   popl %es
   popl %fs
   /* unmask all interrupts and call iret */
+  movl restore_eax, %eax
   sti
   iret
 invalid_call:
   movl $-1, %eax
   jmp  restore_all
+ restore_eax:
+      .long 8
 sysCall_jumpTable:
   .long SYS_HALT, SYS_EXECUTE, SYS_READ, SYS_WRITE, SYS_OPEN, SYS_CLOSE, SYS_GETARGS, SYS_VIDMAP, SYS_SET_HANDLER, SYS_SIGRETURN

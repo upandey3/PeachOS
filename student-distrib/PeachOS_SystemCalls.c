@@ -8,6 +8,7 @@
 #include "PeachOS_FileSys.h"
 #include "PeachOS_SystemCalls.h"
 #define _8KB 0x800
+
 /*
  * Below consists of the initializing the file operation tables for certain file descriptors,
  * whenever we open a file, we make the file_jumptable pointer point to these arrays
@@ -25,6 +26,9 @@ jump_table_ops rtc_table = {rtc_open, rtc_read, rtc_write, rtc_close};
 jump_table_ops file_table = {open_file, read_file, write_file, close_file};
 /* directory, file operation table */
 jump_table_ops directory_table = {open_directory, read_directory, write_directory, close_directory};
+
+uint8_t available_processes[MAX_PROCESSES] = {AVAILABLE, AVAILABLE};
+
 /* System_Call : HALT
  *
  * System_Call_Input: Status
@@ -38,6 +42,7 @@ int32_t SYS_HALT(uint8_t status)
     printf("Worked\n");
     return 0;
 }
+
 /* System_Call : EXECUTE
  *
  * System_Call_Input: Command, buffer that holds filename and arguments.
@@ -54,6 +59,8 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     uint8_t arg_buffer[100] = {'\0'};
     uint8_t executable_check[4] = {ASCII_DEL, ASCII_E, ASCII_L, ASCII_F}; // del E L F stored in the buffer
     uint8_t executable_temp_buf[4];
+    uint32_t virtual_addr;
+
     uint32_t i, j, k;
     i = 0;
     j = 0;
@@ -103,8 +110,39 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     		return -1;
     	}
     }
+
+    // NOT SURE
+    read_data(dir_entry.inode, 24, (uint8_t*)(&virtual_addr), sizeof(virtual_addr));
+    init_page((uint32_t)virtual_addr, (uint32_t)0x800000);
+
+    uint32_t pcb_esp; // get esp into it
+    uint32_t pcb_ebp; // get ebp into it
+
+    // ESP -> EAX, EBP -> EBX
+    asm volatile("           \n\
+        movl %%esp, %%eax    \n\
+        movl %%ebp, %%ebx    \n\
+        movl %%ebx, %%esp    \n\
+        movl %%ebx, %%ebp    \n\
+        "
+        : "=a" (pcb_esp), "=b" (pcb_ebp)
+        :
+        : "ebp", "esp"
+        );
+
+    pcb_t *curr_pcb = pcb_init(pcb_esp, pcb_ebp);
+    uint32_t process_num = get_available_process_num(); // get the available process
+    if(process_num == -1)
+        return -1; // CANT DO ANYTHING, MAX PROCESS REACHED
+    curr_pcb->stack_pointer = pcb_esp;
+    curr_pcb->base_pointer = pcb_ebp;
+    curr_pcb->process_id = process_num;
+
+    strcpy((int8_t*)curr_pcb->args, (int8_t*)arg_buffer);
+
     return 0;
 }
+
 /* System_Call : READ
  *
  * System_Call_Input: fd, buf, nbytes
@@ -126,6 +164,7 @@ int32_t SYS_READ(int32_t fd, void* buf, int32_t nbytes)
     else
         return curr_pcb->open_files[fd].file_jumptable.fd_read(fd, (uint8_t *)buf, nbytes);
 }
+
 /* System_Call : WRITE
  *
  * System_Call_Input: fd, buf, nbytes
@@ -147,6 +186,7 @@ int32_t SYS_WRITE(int32_t fd, const void* buf, int32_t nbytes)
     else
         return curr_pcb->open_files[fd].file_jumptable.fd_write(fd, buf, nbytes);
 }
+
 /* System_Call : OPEN
  *
  * System_Call_Input: filename
@@ -243,6 +283,7 @@ int32_t SYS_CLOSE(int32_t fd)
     }
     return 0;
 }
+
 /* System_Call : GETARGS
  *
  * System_Call_Input: buf, nbytes
@@ -263,6 +304,7 @@ int32_t SYS_GETARGS(uint8_t* buf, int32_t nbytes)
     strcpy((int8_t *)buf, (const int8_t *)curr_pcb->args);
     return 0;
 }
+
 /* System_Call : VIDMAP
  *
  * System_Call_Input: screen_start
@@ -275,6 +317,7 @@ int32_t SYS_VIDMAP(uint8_t** screen_start)
 {
     return -1;
 }
+
 /* System_Call : SET_HANDLER
  *
  * System_Call_Input: signum, handler_address
@@ -287,6 +330,7 @@ int32_t SYS_SET_HANDLER(int32_t signum, void* handler_address)
 {
     return -1;
 }
+
 /* System_Call : SIGRETURN
  *
  * System_Call_Input: void
@@ -299,6 +343,8 @@ int32_t SYS_SIGRETURN(void)
 {
     return -1;
 }
+
+
 /* get_curr_pcb
  *
  * Input: NONE
@@ -322,6 +368,8 @@ pcb_t * get_curr_pcb()
         );
     return ret;
 }
+
+
 /*
  * dummy_function(void)
  *
@@ -335,6 +383,8 @@ pcb_t * get_curr_pcb()
  {
     return -1;
  }
+
+
 /*
  * pcb_init()
  *
@@ -345,9 +395,11 @@ pcb_t * get_curr_pcb()
  * Inputs: none
  * Outputs: returns pointer to the initialized pcb
  */
-pcb_t * pcb_init(uint32_t curr_esp, uint32_t curr_ebp)
+
+
+pcb_t *pcb_init(uint32_t curr_esp, uint32_t curr_ebp)
 {
-  pcb_t * curr_pcb = get_curr_pcb();
+  pcb_t *curr_pcb = get_curr_pcb();
   curr_pcb->open_files[0].file_jumptable = stdin_table;
   curr_pcb->open_files[1].file_jumptable = stdout_table;
   curr_pcb->process_id = -1;
@@ -358,4 +410,18 @@ pcb_t * pcb_init(uint32_t curr_esp, uint32_t curr_ebp)
   curr_pcb->parent_stack_pointer = curr_esp;
   curr_pcb->parent_base_pointer = curr_ebp;
   return curr_pcb;
+}
+
+uint32_t get_available_process_num()
+{
+    uint32_t j = 0;
+    for(j = 0; j < MAX_PROCESSES; j++)
+    {
+        if(available_processes[j] == AVAILABLE)
+        {
+            available_processes[j] = NOT_AVAILABLE;
+            return j;
+        }
+    }
+    return -1;
 }

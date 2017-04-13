@@ -115,7 +115,7 @@ void enablePaging()
  *
 ****************************************************************/
 
-void page_init (uint32_t va, uint32_t pa)
+void init_page (uint32_t va, uint32_t pa)
 {
 	uint32_t PD_index = (va & PD_MASK) >> PDBITSH;
 	uint32_t Page_addr = (pa & OFFSET) >> PTBITSH;

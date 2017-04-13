@@ -1,24 +1,36 @@
 
 #ifndef _SYSTEMCALLS_H
 #define _SYSTEMCALLS_H
+
 #include "types.h"
 #include "x86_desc.h"
+
 #define MAX_OPEN_FILES 8
 #define MAX_FILENAME_SIZE 32
+
+#define MAX_PROCESSES 2
+
 #define LOWER_13_BITS_MASK 0xFFFFE000
+
 #define NOT_AVAILABLE 0
 #define AVAILABLE 1
+
 #define FIRST_FD 2
 #define LAST_FD 7
+
 #define OFFSET0 0x0
+
 #define FILE 2
 #define DIR 1
 #define RTC 0
+
 #define OPEN 0
 #define READ 1
 #define WRITE 2
 #define CLOSE 3
+
 #define argsize 100
+
 #define ASCII_DEL 0x7f
 #define ASCII_E 0x45
 #define ASCII_L 0x4C
@@ -41,6 +53,7 @@ typedef struct {
     int32_t (*fd_write)(int32_t fd, const void* buffer, int32_t nbytes);
     int32_t (*fd_close)(int32_t fd);
 } jump_table_ops;
+
 
 /* File Descriptor Struct */
 typedef struct {
@@ -77,8 +90,11 @@ int32_t SYS_GETARGS(uint8_t* buf, int32_t nbytes);
 int32_t SYS_VIDMAP(uint8_t** screen_start);
 int32_t SYS_SET_HANDLER(int32_t signum, void* handler_address);
 int32_t SYS_SIGRETURN(void);
+
 /*** HELPER FUNCTIONS ***/
 pcb_t * get_curr_pcb();
+uint32_t get_available_process_num();
+uint32_t set_available_process_num();
 int32_t dummy_function();
 pcb_t * pcb_init();
 

@@ -3,7 +3,6 @@
  */
 #ifndef _INTERRUPT_H
 #define _INTERRUPT_H
-
 /*
  * keyboard_init
  *  DESCRIPTION:
@@ -19,7 +18,6 @@
  *          Refer Section: Keyboard interrupt handling function
 */
 extern void keyboard_handler();
-
 /*
  * keyboard_init
  *  DESCRIPTION:
@@ -34,7 +32,6 @@ extern void keyboard_handler();
  *  SOURCE: none, but similiar to keybaord hadling
 */
 extern void rtc_handler();
-
 extern void sysCall_handler();
 
 #endif
