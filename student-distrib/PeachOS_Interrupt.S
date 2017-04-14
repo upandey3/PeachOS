@@ -84,6 +84,11 @@ sysCall_handler:
       the call number placed in eax by 'int $0x80' is valid
       or not */
 
+  //cmpl $1, %eax
+  //jb   invalid_call
+  //cmpl $10, %eax
+  //ja   invalid_call
+
   subl $1, %eax
   cmpl $10, %eax
   ja invalid_call             /* if value in eax is greater than 10 */
