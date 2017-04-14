@@ -8,7 +8,8 @@
 #include "PeachOS_FileSys.h"
 #include "PeachOS_SystemCalls.h"
 
-#define _8KB 0x800
+#define USER_CS 0x0023
+#define USER_DS 0x002B
 
 /*
  * Below consists of the initializing the file operation tables for certain file descriptors,
@@ -17,22 +18,18 @@
  *          http://stackoverflow.com/questions/252748/how-can-i-use-an-array-of-function-pointers
  *          http://www.geeksforgeeks.org/function-pointer-in-c/
  */
-
 /* stdin, file operation table */
 jump_table_ops stdin_table = {terminal_open, terminal_read, dummy_function, terminal_close};
-
 /* stdout, file operation table */
 jump_table_ops stdout_table = {terminal_open, dummy_function, terminal_write, terminal_close};
-
 /* rtc, file operation table */
 jump_table_ops rtc_table = {rtc_open, rtc_read, rtc_write, rtc_close};
-
 /* file, file operation table */
 jump_table_ops file_table = {open_file, read_file, write_file, close_file};
-
 /* directory, file operation table */
 jump_table_ops directory_table = {open_directory, read_directory, write_directory, close_directory};
 
+uint8_t available_processes[MAX_PROCESSES] = {AVAILABLE, AVAILABLE};
 
 /* System_Call : HALT
  *
@@ -64,15 +61,15 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     uint8_t arg_buffer[100] = {'\0'};
     uint8_t executable_check[4] = {ASCII_DEL, ASCII_E, ASCII_L, ASCII_F}; // del E L F stored in the buffer
     uint8_t executable_temp_buf[4];
+    uint32_t virtual_addr;
+
     uint32_t i, j, k;
     i = 0;
     j = 0;
     k = 0;
     dentry_t dir_entry;
-
     while(i < TERMINAL_BUFSIZE && command[i] == ' ') // increment I to get to the filename
         i++;
-
     j = i; // for example- filename starts after 49 spaces, j = i = 49.
     // iterating the passed argument array to get the size of "filename"
     while((i-j) < 32 && command[i] != ' ' && command[i] != '\0' && command[i] != '\n')
@@ -82,17 +79,14 @@ int32_t SYS_EXECUTE(const uint8_t* command)
         size_file_name++; // so when iterating through, we do (51-49) = (i - j) = 2, file size
     }
     file_name[(i=j)] = '\0'; // make the last charcter NULL
-
     while(i < TERMINAL_BUFSIZE && command[i] == ' ' && command[i] != '\0' && command[i] != '\n')
         i++; // get to the start of the argument
-
     while(i < TERMINAL_BUFSIZE && command[i] != '\0' && command[i] != '\n')
     {
         arg_buffer[k] = command[i]; // SEND TO THE GETARGS
         k++;
         i++;
     }
-
     /*
 	 * Read the file, fill in the dir_entry
 	 * Use the inode to send to read_data function to get the first four bytes
@@ -107,9 +101,8 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     {
         terminal_write(1, "Worked", sizeof("Worked"));
         terminal_write(1, (uint8_t *)file_name, size_file_name);
-
-      // get the first four characters read from the file, if they are ELF then its executable
-      if(read_data(dir_entry.inode, 0, executable_temp_buf, 4) == -1)
+        // get the first four characters read from the file, if they are DEL E L F then its executable
+        if(read_data(dir_entry.inode, 0, executable_temp_buf, 4) == -1)
     	{
     		return -1;
     	}
@@ -119,6 +112,97 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     		return -1;
     	}
     }
+
+    // NOT SURE
+    read_data(dir_entry.inode, 24, (uint8_t*)(&virtual_addr), sizeof(virtual_addr)); // 24 DOES MATTER, EIP
+    init_page((uint32_t)virtual_addr, (uint32_t)0x800000);
+
+    uint32_t pcb_esp; // get esp into it
+    uint32_t pcb_ebp; // get ebp into it
+
+    // ESP -> EAX, EBP -> EBX
+    asm volatile("           \n\
+        movl %%esp, %%eax    \n\
+        movl %%ebp, %%ebx    \n\
+        movl %%ebx, %%esp    \n\
+        movl %%ebx, %%ebp    \n\
+        "
+        : "=a" (pcb_esp), "=b" (pcb_ebp)
+        :
+        : "ebp", "esp"
+        );
+
+    pcb_t *curr_pcb = pcb_init(pcb_esp, pcb_ebp);
+    uint32_t process_num = get_available_process_num(); // get the available process
+    if(process_num == -1)
+        return -1; // CANT DO ANYTHING, MAX PROCESS REACHED
+    curr_pcb->stack_pointer = pcb_esp;
+    curr_pcb->base_pointer = pcb_ebp;
+    curr_pcb->process_id = process_num;
+
+    strcpy((int8_t*)curr_pcb->args, (int8_t*)arg_buffer);
+
+    tss.ss0 = KERNEL_DS; // always  the same
+    tss.esp0 = _8MB - _8KB * (curr_pcb->process_id) - 4;
+
+
+    /* What I Did
+     * 1. CLI, block interrupts
+     * 2. Clear EAX, USER_DS -> EAX, moved user data segment into EAX
+     * 3.4. Moved USER_DS into DS, the lower 16 bits only
+     * Source for 3: https://littleosbook.github.io/, 11.3 ENTERING USER MODE
+     * 5. Pushed all the flags on the stack(KERNEL)
+     * 6.7. Popped teh flags and put them in EAX, after clearing it out
+     * 8. Or'd EAX with 0010 0000 0000m to turn IF flag ON for user, so USER can have interrrupts occuring
+     *      -> Sets up EFLAGS(EAX)
+     * Source for 6: http://www.c-jump.com/CIS77/ASM/Instructions/I77_0070_eflags_bits.htm
+     *  9.10. Clear out EDX, Move'd USER_CS into EDX
+     *      -> Sets up CS(EDX)
+     * Source for 10: ULK Section 10.3 subsection: ENTERING THE SYSTEM CALL
+     * 11.12. Clear out ECX, Move'd argument 1(%0) into ECX.
+     *      virtual_addr is 4 bytes long, and holds the 24-27 bytes
+     *      info from EXECUTABLE FILe
+     *      -> Sets up EIP(ECX)
+     * Source for 12: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
+     * 13. Push'd SS(same as DS)
+     * Source for 13: https://web.archive.org/web/20160326062442/http://jamesmolloy.co.uk/tutorial_html/10.-User%20Mode.html
+     * 14. Push'd ESP(value stored in EBP)
+     * 15. Push'd EFLAGS(EAX)
+     * 16. Push'd CS(EDX)
+     * 17. Push'd EIP(ECX)
+     * 18. Push'd Error Code
+     *
+     * General Sources:
+     *      http://x86.renejeschke.de/html/file_module_x86_id_145.html
+     *      http://www.intel.com/Assets/en_US/PDF/manual/253665.pdf INTEL MANUAL 6.4
+    */
+
+    asm volatile ("                 \n\
+        cli                         \n\
+        andl $0, %%eax              \n\
+        movl $0x002B, %%eax        \n\
+        movw %%ax, %%ds            \n\
+        pushfl                      \n\
+        andl $0, %%eax              \n\
+        popl %%eax                  \n\
+        orl $0x200, %%eax           \n\
+        andl $0, %%edx              \n\
+        movl $0x0023, %%edx        \n\
+        andl $0, %%ecx              \n\
+        movl %0, %%ecx              \n\
+        pushw $0x002B              \n\
+        pushl %%ebp                 \n\
+        pushl %%eax                 \n\
+        pushl %%edx                 \n\
+        pushl %%ecx                 \n\
+        pushl $0                    \n\
+        iret                        \n\
+        "
+        :
+        : "r" (virtual_addr)
+        : "cc"
+        );
+
     return 0;
 }
 
@@ -182,14 +266,12 @@ int32_t SYS_OPEN(const uint8_t* filename)
     uint32_t i = 0;
     uint32_t j = 0;
     dentry_t dir_entry;
-
     // iterating the passed argument array to get the size of "filename"
     while(i < MAX_FILENAME_SIZE && filename[i] != ' ')
     {
         fname[i] = filename[i];
         i++;
     }
-
     pcb_t *curr_pcb = get_curr_pcb();
     // find the dir_entry from the file system
     if (read_dentry_by_name(fname, &dir_entry) == -1)
@@ -215,7 +297,6 @@ int32_t SYS_OPEN(const uint8_t* filename)
             }
         }
     }
-
     switch (dir_entry.filetype)
     {
         case FILE:
@@ -241,7 +322,6 @@ int32_t SYS_OPEN(const uint8_t* filename)
      }
     return i;
 }
-
 /* System_Call : CLOSE
  *
  * System_Call_Input: fd
@@ -256,7 +336,6 @@ int32_t SYS_CLOSE(int32_t fd)
     // int i = 0;
     // uint8_t fname[MAX_FILENAME_SIZE]; // UNUSED
     pcb_t * curr_pcb = get_curr_pcb();
-
     if (fd < FIRST_FD || fd > LAST_FD || curr_pcb->open_files[fd].flags == AVAILABLE)
         return -1;
     else
@@ -282,11 +361,9 @@ int32_t SYS_GETARGS(uint8_t* buf, int32_t nbytes)
 {
     if (!buf || !nbytes)
         return -1;
-
     pcb_t * curr_pcb = get_curr_pcb();
     if (nbytes < strlen((const int8_t *)curr_pcb->args))
         return -1;
-
     strcpy((int8_t *)buf, (const int8_t *)curr_pcb->args);
     return 0;
 }
@@ -330,6 +407,7 @@ int32_t SYS_SIGRETURN(void)
     return -1;
 }
 
+
 /* get_curr_pcb
  *
  * Input: NONE
@@ -354,6 +432,7 @@ pcb_t * get_curr_pcb()
     return ret;
 }
 
+
 /*
  * dummy_function(void)
  *
@@ -363,11 +442,11 @@ pcb_t * get_curr_pcb()
  * Inputs: none
  * Outputs: returns -1
  */
-
  int32_t dummy_function()
  {
     return -1;
  }
+
 
 /*
  * pcb_init()
@@ -380,22 +459,32 @@ pcb_t * get_curr_pcb()
  * Outputs: returns pointer to the initialized pcb
  */
 
-pcb_t * pcb_init(uint32_t curr_esp, uint32_t curr_ebp)
-{
-  pcb_t * curr_pcb = get_curr_pcb();
 
+pcb_t *pcb_init(uint32_t curr_esp, uint32_t curr_ebp)
+{
+  pcb_t *curr_pcb = get_curr_pcb();
   curr_pcb->open_files[0].file_jumptable = stdin_table;
   curr_pcb->open_files[1].file_jumptable = stdout_table;
-
   curr_pcb->process_id = -1;
   //curr_pcb->args[] = {'\0'};
-
   curr_pcb->stack_pointer = curr_ebp - _8KB;
   curr_pcb->base_pointer = curr_ebp - _8KB;
-
   curr_pcb->parent_process_id = -2;
   curr_pcb->parent_stack_pointer = curr_esp;
   curr_pcb->parent_base_pointer = curr_ebp;
-
   return curr_pcb;
+}
+
+uint32_t get_available_process_num()
+{
+    uint32_t j = 0;
+    for(j = 0; j < MAX_PROCESSES; j++)
+    {
+        if(available_processes[j] == AVAILABLE)
+        {
+            available_processes[j] = NOT_AVAILABLE;
+            return j;
+        }
+    }
+    return -1;
 }
