@@ -12,6 +12,7 @@
 #include "PeachOS_RTC.h"
 #include "PeachOS_Terminal.h"
 #include "PeachOS_FileSys.h"
+#include "PeachOS_SystemCalls.h"
 
 #define LIMIT 128
 

@@ -8,8 +8,8 @@
 #include "PeachOS_FileSys.h"
 #include "PeachOS_SystemCalls.h"
 
-#define USER_CS 0x0023
-#define USER_DS 0x002B
+#define READ_SIZE 4
+#define ELF_EIP_START 24
 
 /*
  * Below consists of the initializing the file operation tables for certain file descriptors,
@@ -61,24 +61,28 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     uint8_t arg_buffer[100] = {'\0'};
     uint8_t executable_check[4] = {ASCII_DEL, ASCII_E, ASCII_L, ASCII_F}; // del E L F stored in the buffer
     uint8_t executable_temp_buf[4];
-    uint32_t virtual_addr;
+    uint32_t elf_eip;
 
     uint32_t i, j, k;
     i = 0;
     j = 0;
     k = 0;
     dentry_t dir_entry;
+
+
     while(i < TERMINAL_BUFSIZE && command[i] == ' ') // increment I to get to the filename
         i++;
     j = i; // for example- filename starts after 49 spaces, j = i = 49.
     // iterating the passed argument array to get the size of "filename"
     while((i-j) < 32 && command[i] != ' ' && command[i] != '\0' && command[i] != '\n')
     {
-        file_name[(i-j)] = command[i]; // OPEN FILE WITH THIS
+        file_name[size_file_name] = command[i]; // OPEN FILE WITH THIS
         i++;
         size_file_name++; // so when iterating through, we do (51-49) = (i - j) = 2, file size
     }
-    file_name[(i=j)] = '\0'; // make the last charcter NULL
+    size_file_name++;
+    file_name[size_file_name] = '\n'; // make the last charcter NULL
+
     while(i < TERMINAL_BUFSIZE && command[i] == ' ' && command[i] != '\0' && command[i] != '\n')
         i++; // get to the start of the argument
     while(i < TERMINAL_BUFSIZE && command[i] != '\0' && command[i] != '\n')
@@ -87,6 +91,7 @@ int32_t SYS_EXECUTE(const uint8_t* command)
         k++;
         i++;
     }
+    printf("works1\n");
     /*
 	 * Read the file, fill in the dir_entry
 	 * Use the inode to send to read_data function to get the first four bytes
@@ -94,13 +99,13 @@ int32_t SYS_EXECUTE(const uint8_t* command)
 	 */
     if(read_dentry_by_name(file_name, &dir_entry) == -1) // find the dir_entry from the file system
     {
-        terminal_write(1, "Didn't work", sizeof("Didn't work"));
+        terminal_write(1, "Didn't work\n", sizeof("Didn't work\n"));
         return -1;
     }
     else
     {
-        terminal_write(1, "Worked", sizeof("Worked"));
-        terminal_write(1, (uint8_t *)file_name, size_file_name);
+        terminal_write(1, "Worked\n", sizeof("Worked\n"));
+        terminal_write(1, (uint8_t *)file_name, size_file_name + 1);
         // get the first four characters read from the file, if they are DEL E L F then its executable
         if(read_data(dir_entry.inode, 0, executable_temp_buf, 4) == -1)
     	{
@@ -113,37 +118,44 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     	}
     }
 
-    // NOT SURE
-    read_data(dir_entry.inode, 24, (uint8_t*)(&virtual_addr), sizeof(virtual_addr)); // 24 DOES MATTER, EIP
-    init_page((uint32_t)virtual_addr, (uint32_t)0x800000);
+    printf("works2\n");
+    read_data(dir_entry.inode, ELF_EIP_START, executable_temp_buf, READ_SIZE); // 24-27 DOES MATTER, EIP
+    elf_eip = *((uint32_t*) executable_temp_buf);
+    init_page((uint32_t)elf_eip, (uint32_t)0x800000);
+    printf("works3\n");
 
+    printf("works4\n");
+    uint32_t process_num = get_available_process_num(); // get the available process
+    if(process_num == -1)
+        return -1; // CANT DO ANYTHING, MAX PROCESS REACHED
     uint32_t pcb_esp; // get esp into it
-    uint32_t pcb_ebp; // get ebp into it
+    printf("works5\n");
+
+    printf("works6\n");
+    pcb_t* pcb_new = pcb_init(process_num);
+    printf("works7\n");
 
     // ESP -> EAX, EBP -> EBX
-    asm volatile("           \n\
-        movl %%esp, %%eax    \n\
-        movl %%ebp, %%ebx    \n\
-        movl %%ebx, %%esp    \n\
-        movl %%ebx, %%ebp    \n\
-        "
-        : "=a" (pcb_esp), "=b" (pcb_ebp)
+    asm volatile(
+        "movl %%esp, %%eax;"
+        : "=a" (pcb_esp)
         :
         : "ebp", "esp"
         );
 
-    pcb_t *curr_pcb = pcb_init(pcb_esp, pcb_ebp);
-    uint32_t process_num = get_available_process_num(); // get the available process
-    if(process_num == -1)
-        return -1; // CANT DO ANYTHING, MAX PROCESS REACHED
-    curr_pcb->stack_pointer = pcb_esp;
-    curr_pcb->base_pointer = pcb_ebp;
-    curr_pcb->process_id = process_num;
+    pcb_new->parent_stack_pointer = pcb_esp;
 
-    strcpy((int8_t*)curr_pcb->args, (int8_t*)arg_buffer);
+    printf("works8\n");
+    // pcb_new->process_id = process_num;
+    printf("works9\n");
+
+    strcpy((int8_t*)pcb_new->args, (int8_t*)arg_buffer);
+    printf("works10\n");
 
     tss.ss0 = KERNEL_DS; // always  the same
-    tss.esp0 = _8MB - _8KB * (curr_pcb->process_id) - 4;
+    printf("works11\n");
+    tss.esp0 = _8MB - _8KB * (pcb_new->process_id) - 4;
+    printf("works12\n");
 
 
     /* What I Did
@@ -166,43 +178,76 @@ int32_t SYS_EXECUTE(const uint8_t* command)
      * Source for 12: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
      * 13. Push'd SS(same as DS)
      * Source for 13: https://web.archive.org/web/20160326062442/http://jamesmolloy.co.uk/tutorial_html/10.-User%20Mode.html
-     * 14. Push'd ESP(value stored in EBP)
-     * 15. Push'd EFLAGS(EAX)
-     * 16. Push'd CS(EDX)
-     * 17. Push'd EIP(ECX)
-     * 18. Push'd Error Code
+     * 14. Push'd SS
+     * 15. Push'd ESP(value stored in EBP)
+     * 16. Push'd EFLAGS(EAX)
+     * 17. Push'd CS(EDX)
+     * 18. Push'd EIP(ECX)
+     * 19. Push'd Error Code
      *
      * General Sources:
      *      http://x86.renejeschke.de/html/file_module_x86_id_145.html
      *      http://www.intel.com/Assets/en_US/PDF/manual/253665.pdf INTEL MANUAL 6.4
+     *      https://en.wikipedia.org/wiki/Inline_assembler
     */
-
-    asm volatile ("                 \n\
-        cli                         \n\
-        andl $0, %%eax              \n\
-        movl $0x002B, %%eax        \n\
-        movw %%ax, %%ds            \n\
-        pushfl                      \n\
-        andl $0, %%eax              \n\
-        popl %%eax                  \n\
-        orl $0x200, %%eax           \n\
-        andl $0, %%edx              \n\
-        movl $0x0023, %%edx        \n\
-        andl $0, %%ecx              \n\
-        movl %0, %%ecx              \n\
-        pushw $0x002B              \n\
-        pushl %%ebp                 \n\
-        pushl %%eax                 \n\
-        pushl %%edx                 \n\
-        pushl %%ecx                 \n\
-        pushl $0                    \n\
-        iret                        \n\
+    printf("works13\n");
+    printf("EIP: %x\n", elf_eip);
+    asm volatile ("            \n\
+        cli                    \n\
+        andl $0, %%eax         \n\
+        movl $0x2B, %%eax    \n\
+        movw %%ax, %%ds        \n\
+        movw %%ax, %%es        \n\
+        movw %%ax, %%fs        \n\
+        movw %%ax, %%gs        \n\
+        pushl %%eax            \n\
+        pushl %%esp            \n\
+        pushf                  \n\
+        andl $0, %%edx         \n\
+        movl $0x23, %%edx    \n\
+        pushl %%edx            \n\
+        andl $0, %%ecx         \n\
+        movl %0, %%ecx         \n\
+        pushl %%ecx            \n\
+        iret                   \n\
+        leave                  \n\
+        ret                    \n\
         "
         :
-        : "r" (virtual_addr)
-        : "cc"
+        : "r" (elf_eip)
+        : "eax", "ecx", "edx"
         );
 
+    // asm volatile("              \n\
+    //     cli                         \n\
+    //     pushl %%ebp                 \n\
+    //     movl  %%esp, %%ebp          \n\
+    //                                 \n\
+    //     xorl  %%ecx, %%ecx          \n\
+    //     movl  8(%%ebp), %%ecx       \n\
+    //     andl  $0x0000FFFF, %%ecx    \n\
+    //     pushl %%ecx                 \n\
+    //                                 \n\
+    //     movl 12(%%ebp), %%ecx       \n\
+    //     pushl %%ecx                 \n\
+    //                                 \n\
+    //     pushfl                      \n\
+    //                                 \n\
+    //     movl  16(%%ebp), %%ecx      \n\
+    //     andl  $0x0000FFFF, %%ecx    \n\
+    //     pushl %%ecx                 \n\
+    //                                 \n\
+    //     movl %0, %%ecx              \n\
+    //     pushl %%ecx                 \n\
+    //                                 \n\
+    //     iret                        \n\
+    //     "
+    //     :
+    //     :"r"(elf_eip)
+    //     : "ecx"
+    //     );
+
+    printf("works14\n");
     return 0;
 }
 
@@ -432,6 +477,19 @@ pcb_t * get_curr_pcb()
     return ret;
 }
 
+/* get_curr_pcb
+ *
+ * Input: NONE
+ *
+ * Output: Address in Kernel space to start putting our PCB info
+ *
+ * Source: ACP
+ *
+*/
+pcb_t * get_curr_pcb_process(uint8_t process_num)
+{
+    return (pcb_t*)(_8MB - (process_num + 2) * _8KB);
+}
 
 /*
  * dummy_function(void)
@@ -460,18 +518,41 @@ pcb_t * get_curr_pcb()
  */
 
 
-pcb_t *pcb_init(uint32_t curr_esp, uint32_t curr_ebp)
+pcb_t *pcb_init(uint32_t process_num)
 {
-  pcb_t *curr_pcb = get_curr_pcb();
-  curr_pcb->open_files[0].file_jumptable = stdin_table;
-  curr_pcb->open_files[1].file_jumptable = stdout_table;
-  curr_pcb->process_id = -1;
-  //curr_pcb->args[] = {'\0'};
-  curr_pcb->stack_pointer = curr_ebp - _8KB;
-  curr_pcb->base_pointer = curr_ebp - _8KB;
-  curr_pcb->parent_process_id = -2;
-  curr_pcb->parent_stack_pointer = curr_esp;
-  curr_pcb->parent_base_pointer = curr_ebp;
+    pcb_t *parent_pcb = get_curr_pcb();
+    pcb_t *curr_pcb = get_curr_pcb_process(process_num);
+    curr_pcb->open_files[0].file_jumptable = stdin_table;
+    curr_pcb->open_files[1].file_jumptable = stdout_table;
+
+    curr_pcb->process_id = process_num;
+
+    printf("CURR_PCB : %x\n",curr_pcb);
+    printf("*CURR_PCB : %x\n",*curr_pcb);
+    printf("&CURR_PCB : %x\n",&curr_pcb);
+    printf("CURR_PCB->process_id: %x\n", curr_pcb->process_id);
+    printf("CURR_PCB->stackPointer : %x\n",curr_pcb->stack_pointer);
+    printf("CURR_PCB->basePointer : %x\n",curr_pcb->base_pointer);
+    printf("PARENT_PCB->stackPointer : %x\n",curr_pcb->parent_stack_pointer);
+
+    curr_pcb->parent_base_pointer = parent_pcb->base_pointer;
+    // curr_pcb->parent_stack_pointer = ;
+    curr_pcb->base_pointer = (uint32_t)(curr_pcb) + _8KB - 4;
+    curr_pcb->stack_pointer = curr_pcb->base_pointer;
+    if(parent_pcb == _8MB - _8KB)
+        curr_pcb->parent_process_id = -1;
+    else
+        curr_pcb->parent_process_id = parent_pcb->process_id;
+
+
+    printf("CURR_PCB : %x\n",curr_pcb);
+    printf("*CURR_PCB : %x\n",*curr_pcb);
+    printf("&CURR_PCB : %x\n",&curr_pcb);
+    printf("CURR_PCB->process_id: %x\n", curr_pcb->process_id);
+    printf("CURR_PCB->stackPointer : %x\n",curr_pcb->stack_pointer);
+    printf("CURR_PCB->basePointer : %x\n",curr_pcb->base_pointer);
+    printf("PARENT_PCB->stackPointer : %x\n",curr_pcb->parent_stack_pointer);
+    // printf("PARENT_PCB->basePointer : %x\n",curr_pcb->parent_base_pointer);
   return curr_pcb;
 }
 
