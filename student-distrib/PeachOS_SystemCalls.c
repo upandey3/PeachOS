@@ -7,7 +7,9 @@
 #include "PeachOS_Terminal.h"
 #include "PeachOS_FileSys.h"
 #include "PeachOS_SystemCalls.h"
-#define _8KB 0x800
+
+#define USER_CS 0x0023
+#define USER_DS 0x002B
 
 /*
  * Below consists of the initializing the file operation tables for certain file descriptors,
@@ -99,8 +101,8 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     {
         terminal_write(1, "Worked", sizeof("Worked"));
         terminal_write(1, (uint8_t *)file_name, size_file_name);
-      // get the first four characters read from the file, if they are ELF then its executable
-      if(read_data(dir_entry.inode, 0, executable_temp_buf, 4) == -1)
+        // get the first four characters read from the file, if they are DEL E L F then its executable
+        if(read_data(dir_entry.inode, 0, executable_temp_buf, 4) == -1)
     	{
     		return -1;
     	}
@@ -112,7 +114,7 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     }
 
     // NOT SURE
-    read_data(dir_entry.inode, 24, (uint8_t*)(&virtual_addr), sizeof(virtual_addr));
+    read_data(dir_entry.inode, 24, (uint8_t*)(&virtual_addr), sizeof(virtual_addr)); // 24 DOES MATTER, EIP
     init_page((uint32_t)virtual_addr, (uint32_t)0x800000);
 
     uint32_t pcb_esp; // get esp into it
@@ -139,6 +141,67 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     curr_pcb->process_id = process_num;
 
     strcpy((int8_t*)curr_pcb->args, (int8_t*)arg_buffer);
+
+    tss.ss0 = KERNEL_DS; // always  the same
+    tss.esp0 = _8MB - _8KB * (curr_pcb->process_id) - 4;
+
+
+    /* What I Did
+     * 1. CLI, block interrupts
+     * 2. Clear EAX, USER_DS -> EAX, moved user data segment into EAX
+     * 3.4. Moved USER_DS into DS, the lower 16 bits only
+     * Source for 3: https://littleosbook.github.io/, 11.3 ENTERING USER MODE
+     * 5. Pushed all the flags on the stack(KERNEL)
+     * 6.7. Popped teh flags and put them in EAX, after clearing it out
+     * 8. Or'd EAX with 0010 0000 0000m to turn IF flag ON for user, so USER can have interrrupts occuring
+     *      -> Sets up EFLAGS(EAX)
+     * Source for 6: http://www.c-jump.com/CIS77/ASM/Instructions/I77_0070_eflags_bits.htm
+     *  9.10. Clear out EDX, Move'd USER_CS into EDX
+     *      -> Sets up CS(EDX)
+     * Source for 10: ULK Section 10.3 subsection: ENTERING THE SYSTEM CALL
+     * 11.12. Clear out ECX, Move'd argument 1(%0) into ECX.
+     *      virtual_addr is 4 bytes long, and holds the 24-27 bytes
+     *      info from EXECUTABLE FILe
+     *      -> Sets up EIP(ECX)
+     * Source for 12: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
+     * 13. Push'd SS(same as DS)
+     * Source for 13: https://web.archive.org/web/20160326062442/http://jamesmolloy.co.uk/tutorial_html/10.-User%20Mode.html
+     * 14. Push'd ESP(value stored in EBP)
+     * 15. Push'd EFLAGS(EAX)
+     * 16. Push'd CS(EDX)
+     * 17. Push'd EIP(ECX)
+     * 18. Push'd Error Code
+     *
+     * General Sources:
+     *      http://x86.renejeschke.de/html/file_module_x86_id_145.html
+     *      http://www.intel.com/Assets/en_US/PDF/manual/253665.pdf INTEL MANUAL 6.4
+    */
+
+    asm volatile ("                 \n\
+        cli                         \n\
+        andl $0, %%eax              \n\
+        movl $0x002B, %%eax        \n\
+        movw %%ax, %%ds            \n\
+        pushfl                      \n\
+        andl $0, %%eax              \n\
+        popl %%eax                  \n\
+        orl $0x200, %%eax           \n\
+        andl $0, %%edx              \n\
+        movl $0x0023, %%edx        \n\
+        andl $0, %%ecx              \n\
+        movl %0, %%ecx              \n\
+        pushw $0x002B              \n\
+        pushl %%ebp                 \n\
+        pushl %%eax                 \n\
+        pushl %%edx                 \n\
+        pushl %%ecx                 \n\
+        pushl $0                    \n\
+        iret                        \n\
+        "
+        :
+        : "r" (virtual_addr)
+        : "cc"
+        );
 
     return 0;
 }

@@ -8,6 +8,8 @@
 #define _TYPES_H
 
 #define NULL 0
+#define _8MB 0x800000
+#define _8KB 0x800
 
 #ifndef ASM
 
