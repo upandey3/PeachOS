@@ -92,10 +92,10 @@ int32_t SYS_SET_HANDLER(int32_t signum, void* handler_address);
 int32_t SYS_SIGRETURN(void);
 
 /*** HELPER FUNCTIONS ***/
-pcb_t * get_curr_pcb();
+pcb_t *get_curr_pcb();
 uint32_t get_available_process_num();
 uint32_t set_available_process_num();
 int32_t dummy_function();
-pcb_t * pcb_init();
+pcb_t *pcb_init();
 
 #endif

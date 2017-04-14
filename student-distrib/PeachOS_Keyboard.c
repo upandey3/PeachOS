@@ -233,6 +233,12 @@ void keyboard_key_pressed(uint8_t keyboard_value)
             clear_screen();
             empty_buffer(keyboard_buffer); // ADDED
         }
+        if(keyboard_ascii == 's')
+        {
+            clear_screen();
+            printf("Starting hello...\n");
+            SYS_EXECUTE((uint8_t *)"cat hello");
+        }
         if(keyboard_ascii == '1')
         {
             clear_screen();
