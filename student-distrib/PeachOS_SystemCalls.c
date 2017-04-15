@@ -50,7 +50,7 @@ uint8_t available_processes[MAX_PROCESSES] = {AVAILABLE, AVAILABLE};
 */
 int32_t SYS_HALT(uint8_t status)
 {
-    int index;
+    int index = 0;
     int retval;
 
     cli();
