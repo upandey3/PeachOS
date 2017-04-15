@@ -48,12 +48,24 @@
  *          http://www.microchip.com/forums/m798465.aspx
 */
 typedef struct {
-    int32_t (*fd_open)(const void* fname);
+    int32_t (*fd_open)(const uint8_t* fname);
     int32_t (*fd_read)(int32_t fd, void* buffer, int32_t nbytes);
     int32_t (*fd_write)(int32_t fd, const void* buffer, int32_t nbytes);
     int32_t (*fd_close)(int32_t fd);
 } jump_table_ops;
 
+// /* stdin, file operation table */
+// jump_table_ops stdin_table;
+// /* stdout, file operation table */
+// jump_table_ops stdout_table;
+// /* rtc, file operation table */
+// jump_table_ops rtc_table;
+// /* file, file operation table */
+// jump_table_ops file_table;
+// /* directory, file operation table */
+// jump_table_ops directory_table;
+// /* closed file, file operation table */
+// jump_table_ops closed_table;
 
 /* File Descriptor Struct */
 typedef struct {
@@ -96,7 +108,11 @@ pcb_t * get_curr_pcb();
 uint32_t get_available_process_num();
 uint32_t set_available_process_num();
 int32_t dummy_function();
+<<<<<<< HEAD
 pcb_t * pcb_init();
+=======
+pcb_t *pcb_init();
+>>>>>>> ea9297b8fd67c9ca56885fa731a5e99a6a1c792c
 pcb_t * get_curr_pcb_process(uint8_t process_num);
 
 #endif

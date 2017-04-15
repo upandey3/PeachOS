@@ -6,6 +6,11 @@
 #define ONE_K			  1024
 #define FOUR_K			  4096
 
+#define PD_MASK 0xFFC00000
+#define OFFSET  0xFFFFF000
+#define PDBITSH 22
+#define PTBITSH 12
+
 //struct for page directory entries
 typedef struct page_directory {
 		struct {

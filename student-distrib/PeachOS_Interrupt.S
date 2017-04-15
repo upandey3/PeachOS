@@ -66,6 +66,9 @@ sysCall_handler:
   pushl %edx                  /* 3rd argument */
   pushl %ecx                  /* 2nd argument */
   pushl %ebx                  /* 1st argument */
+
+  movl $0x18, %edx
+  movw %dx, %ds
   /* Check to see whether value in eax is valid i.e. whether
       the call number placed in eax by 'int $0x80' is valid
       or not */

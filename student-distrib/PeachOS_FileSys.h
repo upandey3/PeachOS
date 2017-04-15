@@ -65,4 +65,13 @@ int32_t close_directory(int32_t fd);
 int32_t read_directory(int32_t fd, void * buf, int32_t nbytes);
 int32_t write_directory(int32_t fd, const void * buf, int32_t nbytes);
 
+extern dentry_t* dirEntries;
+extern inode_t* inodes;
+extern uint32_t num_directories;
+extern uint32_t num_inodes;
+extern uint32_t num_datablocks;
+extern uint32_t bbAddr;
+extern uint32_t dataStart;
+extern uint32_t fs_ctrl_3;
+
 #endif /* _FILESYS_H */
