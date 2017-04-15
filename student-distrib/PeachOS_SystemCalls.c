@@ -18,16 +18,25 @@
  *          http://stackoverflow.com/questions/252748/how-can-i-use-an-array-of-function-pointers
  *          http://www.geeksforgeeks.org/function-pointer-in-c/
  */
+ 
 /* stdin, file operation table */
 jump_table_ops stdin_table = {terminal_open, terminal_read, dummy_function, terminal_close};
+
 /* stdout, file operation table */
 jump_table_ops stdout_table = {terminal_open, dummy_function, terminal_write, terminal_close};
+
 /* rtc, file operation table */
 jump_table_ops rtc_table = {rtc_open, rtc_read, rtc_write, rtc_close};
+
 /* file, file operation table */
 jump_table_ops file_table = {open_file, read_file, write_file, close_file};
+
 /* directory, file operation table */
 jump_table_ops directory_table = {open_directory, read_directory, write_directory, close_directory};
+
+/* closed file, file operation table */
+jump_table_ops closed_table = {dummy_function, dummy_function, dummy_function, dummy_function};
+
 
 uint8_t available_processes[MAX_PROCESSES] = {AVAILABLE, AVAILABLE};
 
@@ -41,7 +50,48 @@ uint8_t available_processes[MAX_PROCESSES] = {AVAILABLE, AVAILABLE};
 */
 int32_t SYS_HALT(uint8_t status)
 {
-    printf("Worked\n");
+    int index;
+    int retval;
+
+    cli();
+
+    pcb_t * current_pcb = get_curr_pcb();
+    pcb_t * parent_pcb  = get_curr_pcb_process((uint8_t)current_pcb->parent_process_id);
+
+    available_processes[(uint8_t)current_pcb->process_id] = NOT_AVAILABLE;
+
+    while (index < MAX_OPEN_FILES)
+    {
+      if (current_pcb->open_files[index].flags == AVAILABLE)
+      {
+          retval = SYS_CLOSE(index);
+      }
+
+      current_pcb->open_files[index].flags = NOT_AVAILABLE;
+      current_pcb->open_files[index].file_jumptable = closed_table;
+
+      index++;
+    }
+
+    /* If we are trying to halt the last process in the terminal,
+      then execute shell again
+      SOURCE: https://piazza.com/class/iwy7snh02335on?cid=911 */
+
+    if (current_pcb->process_id == current_pcb->parent_process_id)
+  	{
+  		SYS_EXECUTE((uint8_t *)"shell");
+  	}
+
+    // Have to restore Page Mapping Here
+    init_page (0x8000000, _8MB + parent_pcb->process_id * _8KB);
+
+    tss.ss0 = KERNEL_DS;
+	  tss.esp0 = current_pcb->parent_stack_pointer;
+
+    sti();
+
+    // Have to do IRET here
+
     return 0;
 }
 
@@ -120,8 +170,11 @@ int32_t SYS_EXECUTE(const uint8_t* command)
 
     printf("works2\n");
     read_data(dir_entry.inode, ELF_EIP_START, executable_temp_buf, READ_SIZE); // 24-27 DOES MATTER, EIP
+
     elf_eip = *((uint32_t*) executable_temp_buf);
+
     init_page((uint32_t)elf_eip, (uint32_t)0x800000);
+
     printf("works3\n");
 
     printf("works4\n");
@@ -195,7 +248,7 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     asm volatile ("            \n\
         cli                    \n\
         andl $0, %%eax         \n\
-        movl $0x2B, %%eax    \n\
+        movl $0x2B, %%eax      \n\
         movw %%ax, %%ds        \n\
         movw %%ax, %%es        \n\
         movw %%ax, %%fs        \n\
@@ -204,7 +257,7 @@ int32_t SYS_EXECUTE(const uint8_t* command)
         pushl %%esp            \n\
         pushf                  \n\
         andl $0, %%edx         \n\
-        movl $0x23, %%edx    \n\
+        movl $0x23, %%edx      \n\
         pushl %%edx            \n\
         andl $0, %%ecx         \n\
         movl %0, %%ecx         \n\
@@ -218,7 +271,7 @@ int32_t SYS_EXECUTE(const uint8_t* command)
         : "eax", "ecx", "edx"
         );
 
-    // asm volatile("              \n\
+    //     asm volatile("              \n\
     //     cli                         \n\
     //     pushl %%ebp                 \n\
     //     movl  %%esp, %%ebp          \n\
@@ -518,10 +571,11 @@ pcb_t * get_curr_pcb_process(uint8_t process_num)
  */
 
 
-pcb_t *pcb_init(uint32_t process_num)
+pcb_t * pcb_init(uint32_t process_num)
 {
-    pcb_t *parent_pcb = get_curr_pcb();
-    pcb_t *curr_pcb = get_curr_pcb_process(process_num);
+    pcb_t * parent_pcb = get_curr_pcb();
+    pcb_t * curr_pcb = get_curr_pcb_process(process_num);
+
     curr_pcb->open_files[0].file_jumptable = stdin_table;
     curr_pcb->open_files[1].file_jumptable = stdout_table;
 
@@ -539,7 +593,8 @@ pcb_t *pcb_init(uint32_t process_num)
     // curr_pcb->parent_stack_pointer = ;
     curr_pcb->base_pointer = (uint32_t)(curr_pcb) + _8KB - 4;
     curr_pcb->stack_pointer = curr_pcb->base_pointer;
-    if(parent_pcb == _8MB - _8KB)
+
+    if ( (uint32_t)(parent_pcb) == _8MB - _8KB)
         curr_pcb->parent_process_id = -1;
     else
         curr_pcb->parent_process_id = parent_pcb->process_id;

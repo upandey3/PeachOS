@@ -131,4 +131,6 @@ void init_page (uint32_t va, uint32_t pa)
 	page_directory[PD_index].global_page = 1;
 	page_directory[PD_index].read_write = 1;
 	page_directory[PD_index].present = 1;
+
+	return;
 }
