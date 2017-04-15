@@ -182,7 +182,7 @@ entry (unsigned long magic, unsigned long addr)
 	call_sys_halt(2);
 
 	clear_screen();
-	uint8_t buffer[100] = "shell 1 2 3 4";
+	uint8_t buffer[100] = "shell";
 	call_sys_execute(buffer);
 	/* Spin (nicely, so we don't chew up cycles) */
 	asm volatile(".1: hlt; jmp .1;");

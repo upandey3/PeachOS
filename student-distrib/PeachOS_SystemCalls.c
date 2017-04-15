@@ -28,6 +28,9 @@ jump_table_ops rtc_table = {rtc_open, rtc_read, rtc_write, rtc_close};
 jump_table_ops file_table = {open_file, read_file, write_file, close_file};
 /* directory, file operation table */
 jump_table_ops directory_table = {open_directory, read_directory, write_directory, close_directory};
+/* closed file, file operation table */
+jump_table_ops closed_table = {dummy_function, dummy_function, dummy_function, dummy_function};
+
 
 uint8_t available_processes[MAX_PROCESSES] = {AVAILABLE, AVAILABLE};
 
@@ -41,7 +44,56 @@ uint8_t available_processes[MAX_PROCESSES] = {AVAILABLE, AVAILABLE};
 */
 int32_t SYS_HALT(uint8_t status)
 {
-    printf("Worked\n");
+//     int index;
+//     int retval;
+//     cli();
+//     pcb_t * current_pcb = get_curr_pcb();
+//     pcb_t * parent_pcb  = get_curr_pcb_process((uint8_t)(current_pcb->parent_process_id));
+//     available_processes[(uint8_t)current_pcb->process_id] = NOT_AVAILABLE;
+//     while (index < MAX_OPEN_FILES)
+//     {
+//         if (current_pcb->open_files[index].flags == AVAILABLE)
+//         {
+//             retval = SYS_CLOSE(index);
+//         }
+//         current_pcb->open_files[index].flags = NOT_AVAILABLE;
+//         current_pcb->open_files[index].file_jumptable = closed_table;
+//         index++;
+//     }
+//     /* If we are trying to halt the last process in the terminal,
+//       then execute shell again
+//       SOURCE: https://piazza.com/class/iwy7snh02335on?cid=911 */
+//     if (current_pcb->process_id == current_pcb->parent_process_id)
+//   	{
+//   		SYS_EXECUTE((uint8_t *)"shell");
+//   	}
+//     tss.ss0 = KERNEL_DS;
+// 	tss.esp0 = current_pcb->parent_stack_pointer;
+//     sti();
+// );
+
+/*
+asm volatile ("                 \n\
+    cli                         \n\
+    pushl $0x2B                 \n\
+    movl %1, %%eax              \n\
+    pushl %%eax                 \n\
+    sti                         \n\
+    pushfl                      \n\
+    popl %%eax                  \n\
+    orl $0x3200, %%eax           \n\
+    pushl %%eax                 \n\
+    pushl $0x23                 \n\
+    movl %0, %%eax              \n\
+    pushl %%eax                 \n\
+    iret                        \n\
+    "
+    :
+    : "r" (elf_eip), "r" (((elf_eip & 0xFFC00000) + (_8MB >> 1)) - 4)
+    : "eax"
+);
+*/
+    printf("YOYOYOYOYOYOOYY\n" );
     return 0;
 }
 
@@ -91,7 +143,6 @@ int32_t SYS_EXECUTE(const uint8_t* command)
         k++;
         i++;
     }
-    printf("works1\n");
     /*
 	 * Read the file, fill in the dir_entry
 	 * Use the inode to send to read_data function to get the first four bytes
@@ -118,22 +169,31 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     	}
     }
 
-    printf("works2\n");
     read_data(dir_entry.inode, ELF_EIP_START, executable_temp_buf, READ_SIZE); // 24-27 DOES MATTER, EIP
     elf_eip = *((uint32_t*) executable_temp_buf);
     init_page((uint32_t)elf_eip, (uint32_t)0x800000);
-    printf("works3\n");
 
-    printf("works4\n");
+    printf("PDE: %d\n", page_directory[elf_eip >> PDBITSH].accessed);
+
+    uint32_t file_offset = 0;
+    uint8_t* shell_base = (uint8_t*)0x08048000;
+    uint32_t file_length_size = inodes[dir_entry.inode].filelength;
+    uint32_t file_length;
+    while((file_length = read_data(dir_entry.inode, file_offset, (uint8_t*)shell_base + file_offset, file_length_size - file_offset)) > 0)
+    {
+        file_offset = file_offset + file_length;
+    }
+
+    printf("PDE Check: %d\n", page_directory[elf_eip >> PDBITSH].present);
+
+    page_directory[elf_eip >> PDBITSH].accessed = 0;
+
     uint32_t process_num = get_available_process_num(); // get the available process
     if(process_num == -1)
         return -1; // CANT DO ANYTHING, MAX PROCESS REACHED
     uint32_t pcb_esp; // get esp into it
-    printf("works5\n");
 
-    printf("works6\n");
     pcb_t* pcb_new = pcb_init(process_num);
-    printf("works7\n");
 
     // ESP -> EAX, EBP -> EBX
     asm volatile(
@@ -145,17 +205,10 @@ int32_t SYS_EXECUTE(const uint8_t* command)
 
     pcb_new->parent_stack_pointer = pcb_esp;
 
-    printf("works8\n");
-    // pcb_new->process_id = process_num;
-    printf("works9\n");
-
     strcpy((int8_t*)pcb_new->args, (int8_t*)arg_buffer);
-    printf("works10\n");
 
     tss.ss0 = KERNEL_DS; // always  the same
-    printf("works11\n");
-    tss.esp0 = _8MB - _8KB * (pcb_new->process_id) - 4;
-    printf("works12\n");
+    tss.esp0 = (_8MB - _8KB * (pcb_new->process_id)) - 4;
 
 
     /* What I Did
@@ -192,61 +245,27 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     */
     printf("works13\n");
     printf("EIP: %x\n", elf_eip);
-    asm volatile ("            \n\
-        cli                    \n\
-        andl $0, %%eax         \n\
-        movl $0x2B, %%eax    \n\
-        movw %%ax, %%ds        \n\
-        movw %%ax, %%es        \n\
-        movw %%ax, %%fs        \n\
-        movw %%ax, %%gs        \n\
-        pushl %%eax            \n\
-        pushl %%esp            \n\
-        pushf                  \n\
-        andl $0, %%edx         \n\
-        movl $0x23, %%edx    \n\
-        pushl %%edx            \n\
-        andl $0, %%ecx         \n\
-        movl %0, %%ecx         \n\
-        pushl %%ecx            \n\
-        iret                   \n\
-        leave                  \n\
-        ret                    \n\
+
+    // SS, ESP, EFLAGS, CS, EIP
+    asm volatile ("                 \n\
+        cli                         \n\
+        pushl $0x2B                 \n\
+        movl %1, %%eax              \n\
+        pushl %%eax                 \n\
+        sti                         \n\
+        pushfl                      \n\
+        popl %%eax                  \n\
+        orl $0x3200, %%eax           \n\
+        pushl %%eax                 \n\
+        pushl $0x23                 \n\
+        movl %0, %%eax              \n\
+        pushl %%eax                 \n\
+        iret                        \n\
         "
         :
-        : "r" (elf_eip)
-        : "eax", "ecx", "edx"
-        );
-
-    // asm volatile("              \n\
-    //     cli                         \n\
-    //     pushl %%ebp                 \n\
-    //     movl  %%esp, %%ebp          \n\
-    //                                 \n\
-    //     xorl  %%ecx, %%ecx          \n\
-    //     movl  8(%%ebp), %%ecx       \n\
-    //     andl  $0x0000FFFF, %%ecx    \n\
-    //     pushl %%ecx                 \n\
-    //                                 \n\
-    //     movl 12(%%ebp), %%ecx       \n\
-    //     pushl %%ecx                 \n\
-    //                                 \n\
-    //     pushfl                      \n\
-    //                                 \n\
-    //     movl  16(%%ebp), %%ecx      \n\
-    //     andl  $0x0000FFFF, %%ecx    \n\
-    //     pushl %%ecx                 \n\
-    //                                 \n\
-    //     movl %0, %%ecx              \n\
-    //     pushl %%ecx                 \n\
-    //                                 \n\
-    //     iret                        \n\
-    //     "
-    //     :
-    //     :"r"(elf_eip)
-    //     : "ecx"
-    //     );
-
+        : "r" (elf_eip), "r" (((elf_eip & 0xFFC00000) + (_8MB >> 1)) - 4)
+        : "eax"
+    );
     printf("works14\n");
     return 0;
 }
@@ -265,12 +284,13 @@ int32_t SYS_EXECUTE(const uint8_t* command)
 int32_t SYS_READ(int32_t fd, void* buf, int32_t nbytes)
 {
 // MAKE SURE READ FUNCTIONS ARE GOOD IN THE JUMP TABLES
-    pcb_t * curr_pcb = get_curr_pcb();
-    if (fd > LAST_FD || fd < FIRST_FD || !buf ||
-        curr_pcb->open_files[fd].flags == AVAILABLE)
-        return -1;
-    else
-        return curr_pcb->open_files[fd].file_jumptable.fd_read(fd, (uint8_t *)buf, nbytes);
+    // pcb_t *curr_pcb = get_curr_pcb();
+    // if (fd > LAST_FD || fd < 0 || fd == 1 || !buf ||
+    //     curr_pcb->open_files[fd].flags == AVAILABLE)
+    //     return -1;
+    // else
+    //     return curr_pcb->open_files[fd].file_jumptable.fd_read(0, (uint8_t *)buf, nbytes);
+    terminal_read(fd, buf, nbytes);
 }
 
 /* System_Call : WRITE
@@ -287,12 +307,13 @@ int32_t SYS_READ(int32_t fd, void* buf, int32_t nbytes)
 int32_t SYS_WRITE(int32_t fd, const void* buf, int32_t nbytes)
 {
 // MAKE SURE WRITE FUNCTIONS ARE GOOD IN THE JUMP TABLES
-    pcb_t * curr_pcb = get_curr_pcb();
-    if (fd > LAST_FD || fd < FIRST_FD || !buf ||
-        curr_pcb->open_files[fd].flags == AVAILABLE)
-        return -1;
-    else
-        return curr_pcb->open_files[fd].file_jumptable.fd_write(fd, buf, nbytes);
+    // pcb_t *curr_pcb = get_curr_pcb();
+    // if (fd > LAST_FD || fd <= 0 || !buf ||
+    //     curr_pcb->open_files[fd].flags == AVAILABLE)
+    //     return -1;
+    // else
+    //     return curr_pcb->open_files[fd].file_jumptable.fd_write(1, buf, nbytes);
+    terminal_write(fd, buf, nbytes);
 }
 
 /* System_Call : OPEN
@@ -521,38 +542,26 @@ pcb_t * get_curr_pcb_process(uint8_t process_num)
 pcb_t *pcb_init(uint32_t process_num)
 {
     pcb_t *parent_pcb = get_curr_pcb();
-    pcb_t *curr_pcb = get_curr_pcb_process(process_num);
+    pcb_t *curr_pcb = get_curr_pcb_process((uint8_t)process_num);
     curr_pcb->open_files[0].file_jumptable = stdin_table;
     curr_pcb->open_files[1].file_jumptable = stdout_table;
 
     curr_pcb->process_id = process_num;
 
-    printf("CURR_PCB : %x\n",curr_pcb);
-    printf("*CURR_PCB : %x\n",*curr_pcb);
-    printf("&CURR_PCB : %x\n",&curr_pcb);
-    printf("CURR_PCB->process_id: %x\n", curr_pcb->process_id);
-    printf("CURR_PCB->stackPointer : %x\n",curr_pcb->stack_pointer);
-    printf("CURR_PCB->basePointer : %x\n",curr_pcb->base_pointer);
-    printf("PARENT_PCB->stackPointer : %x\n",curr_pcb->parent_stack_pointer);
-
     curr_pcb->parent_base_pointer = parent_pcb->base_pointer;
-    // curr_pcb->parent_stack_pointer = ;
     curr_pcb->base_pointer = (uint32_t)(curr_pcb) + _8KB - 4;
     curr_pcb->stack_pointer = curr_pcb->base_pointer;
-    if(parent_pcb == _8MB - _8KB)
+
+    if(parent_pcb == (pcb_t*)(_8MB - _8KB))
         curr_pcb->parent_process_id = -1;
     else
         curr_pcb->parent_process_id = parent_pcb->process_id;
 
-
     printf("CURR_PCB : %x\n",curr_pcb);
-    printf("*CURR_PCB : %x\n",*curr_pcb);
-    printf("&CURR_PCB : %x\n",&curr_pcb);
     printf("CURR_PCB->process_id: %x\n", curr_pcb->process_id);
     printf("CURR_PCB->stackPointer : %x\n",curr_pcb->stack_pointer);
     printf("CURR_PCB->basePointer : %x\n",curr_pcb->base_pointer);
     printf("PARENT_PCB->stackPointer : %x\n",curr_pcb->parent_stack_pointer);
-    // printf("PARENT_PCB->basePointer : %x\n",curr_pcb->parent_base_pointer);
   return curr_pcb;
 }
 

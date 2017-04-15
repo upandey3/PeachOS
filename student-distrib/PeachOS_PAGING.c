@@ -6,10 +6,6 @@
 page_directory_t page_directory[ONE_K] __attribute__((aligned(FOUR_K)));
 page_table_t page_table[ONE_K] __attribute__((aligned(FOUR_K)));
 
-#define PD_MASK 0xFFC00000
-#define OFFSET  0xFFFFF000
-#define PDBITSH 22
-#define PTBITSH 12
 
 /*****************************************************************
  *
@@ -126,7 +122,7 @@ void init_page (uint32_t va, uint32_t pa)
 	page_directory[PD_index].accessed = 0;
 	page_directory[PD_index].cache_disabled = 0;
 	page_directory[PD_index].write_through = 0;
-	page_directory[PD_index].user_supervisor = 0;
+	page_directory[PD_index].user_supervisor = 1;
 	page_directory[PD_index].page_size = 1;
 	page_directory[PD_index].global_page = 1;
 	page_directory[PD_index].read_write = 1;
