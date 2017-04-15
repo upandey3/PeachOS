@@ -126,7 +126,7 @@ void init_page (uint32_t va, uint32_t pa)
 	page_directory[PD_index].accessed = 0;
 	page_directory[PD_index].cache_disabled = 0;
 	page_directory[PD_index].write_through = 0;
-	page_directory[PD_index].user_supervisor = 0;
+	page_directory[PD_index].user_supervisor = 1;
 	page_directory[PD_index].page_size = 1;
 	page_directory[PD_index].global_page = 1;
 	page_directory[PD_index].read_write = 1;

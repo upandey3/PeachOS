@@ -18,7 +18,7 @@
  *          http://stackoverflow.com/questions/252748/how-can-i-use-an-array-of-function-pointers
  *          http://www.geeksforgeeks.org/function-pointer-in-c/
  */
- 
+
 /* stdin, file operation table */
 jump_table_ops stdin_table = {terminal_open, terminal_read, dummy_function, terminal_close};
 
@@ -83,6 +83,7 @@ int32_t SYS_HALT(uint8_t status)
   	}
 
     // Have to restore Page Mapping Here
+    // Not sure about this
     init_page (0x8000000, _8MB + parent_pcb->process_id * _8KB);
 
     tss.ss0 = KERNEL_DS;
