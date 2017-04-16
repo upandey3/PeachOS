@@ -77,25 +77,16 @@ int32_t SYS_HALT(uint8_t status)
     tss.ss0 = KERNEL_DS;
 	  tss.esp0 = (_8MB - _8KB * (current_pcb->parent_process_id + 1)) - 4;
 
-    // uint8_t executable_temp_buf[4];
-    //
-    // read_data(dir_entry.inode, ELF_EIP_START, executable_temp_buf, READ_SIZE); // 24-27 DOES MATTER, EIP
-    //
-    // elf_eip = *((uint32_t*) executable_temp_buf);
-    //
-    // init_page((uint32_t)elf_eip, (uint32_t)0x800000);
-
     sti();
 
-    asm volatile ("                 \n\
+    asm volatile ("               \n\
       cli                         \n\
       pushl $0x2B                 \n\
       movl %1, %%eax              \n\
       pushl %%eax                 \n\
-      sti                         \n\
       pushfl                      \n\
       popl %%eax                  \n\
-      orl $0x3200, %%eax           \n\
+      orl $0x3200, %%eax          \n\
       pushl %%eax                 \n\
       pushl $0x23                 \n\
       movl %0, %%eax              \n\
@@ -284,12 +275,15 @@ int32_t SYS_EXECUTE(const uint8_t* command)
         sti                         \n\
         pushfl                      \n\
         popl %%eax                  \n\
-        orl $0x3200, %%eax           \n\
+        orl $0x3200, %%eax          \n\
         pushl %%eax                 \n\
         pushl $0x23                 \n\
         movl %0, %%eax              \n\
         pushl %%eax                 \n\
         iret                        \n\
+        "HERE:"                     \n\
+        "LEAVE"                     \n\
+        "RET"                       \n\
         "
         :
         : "r" (elf_eip), "r" (((elf_eip & 0xFFC00000) + (_8MB >> 1)) - 4)
