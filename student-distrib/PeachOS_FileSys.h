@@ -4,6 +4,7 @@
 #include "types.h"
 #include "lib.h"
 #include "PeachOS_Terminal.h"
+#include "PeachOS_SystemCalls.h"
 
 #define FILE_TYPE_SIZE 4
 #define MAX_BYTE_WIDTH 6 // Formatting. Determined by comparing printf output with terminal size

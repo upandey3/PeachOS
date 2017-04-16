@@ -354,9 +354,11 @@ int32_t print_file_by_index(uint32_t file_num)
  *  RETURN VALUE: the index of the open file in the file array (the file
  *								descriptor), return -1 if unable to open file
 */
-int32_t open_file(const uint8_t * filename){
+int32_t open_file(const uint8_t * filename)
+{
 	return -1;
 }
+
 /*
  * close_file
  *  DESCRIPTION:
@@ -380,8 +382,41 @@ int32_t close_file(int32_t fd){
  *  RETURN VALUE: number from bytes copied to buf, -1 if unsuccessful
 */
 int32_t read_file(int32_t fd, void * buf, int32_t nbytes){
-	return -1;
+
+	inode_t * dest_inode;
+    uint32_t * inode_data_array;
+    uint32_t file_length, file_inode, file_position;
+    uint32_t num_bytes, new_pos;
+    pcb_t * curr_pcb;
+
+    if (!buf || fd < FIRST_FD || fd > LAST_FD || !nbytes)
+        return -1;
+
+    curr_pcb = get_curr_pcb();
+    file_inode = curr_pcb->open_files[fd].inode;
+    file_position = curr_pcb->open_files[fd].file_position;
+
+    dest_inode = inodes + file_inode;
+    inode_data_array = (uint32_t *)dest_inode;
+    file_length = inode_data_array[0];
+
+    if (file_position >= file_length)
+        return 0;
+
+    num_bytes = read_data(file_inode, file_position, buf, nbytes);
+    new_pos = num_bytes + file_position;
+    curr_pcb->open_files[fd].file_position = new_pos >= file_length ? 0 : new_pos;
+    return num_bytes;
 }
+/* File Descriptor Struct */
+
+/*typedef struct {
+    jump_table_ops file_jumptable;
+    int32_t inode;
+    int32_t file_position;
+    int32_t flags;
+} file_descriptor_t;*/
+
 /*
  * write_file
  *  DESCRIPTION:
@@ -408,7 +443,32 @@ int32_t write_file(int32_t fd, const void * buf, int32_t nbytes){
  *								file descriptor), return -1 if unable to open file
 */
 int32_t open_directory(const uint8_t * dname){
-	return -1;
+//
+	//inode_t * dest_inode;
+    //uint32_t * inode_data_array;
+    //uint32_t file_length, file_inode, file_position;
+    //uint32_t num_bytes, new_pos;
+    //pcb_t * curr_pcb;
+//
+    //if (!buf || fd < FIRST_FD || fd > LAST_FD || !nbytes)
+    //    return -1;
+//
+    //curr_pcb = get_curr_pcb();
+    //file_inode = curr_pcb->open_files[fd].inode;
+    //file_position = curr_pcb->open_files[fd].file_position;
+//
+    //dest_inode = inodes + file_inode;
+    //inode_data_array = (uint32_t *)dest_inode;
+    //file_length = inode_data_array[0];
+//
+    //if (file_position >= file_length)
+    //    return 0;
+//
+    //num_bytes = read_data(file_inode, file_position, buf, nbytes);
+    //new_pos = num_bytes + file_position;
+    //curr_pcb->open_files[fd].file_position = new_pos >= file_length ? 0 : new_pos;
+    //return num_bytes;
+    return 0;
 }
 /*
  * close_directory
@@ -434,7 +494,11 @@ int32_t close_directory(int32_t fd){
  *  RETURN VALUE: number from bytes copied to buf, -1 if unsuccessful
 */
 int32_t read_directory(int32_t fd, void * buf, int32_t nbytes){
-	return -1;
+
+	printf("test\n");
+	terminal_write(fd, "__LINE__", sizeof("__LINE__"));
+
+	return 0;
 }
 /*
  * write_directory
