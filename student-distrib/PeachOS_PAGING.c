@@ -122,11 +122,34 @@ void init_page (uint32_t va, uint32_t pa)
 	page_directory[PD_index].accessed = 0;
 	page_directory[PD_index].cache_disabled = 0;
 	page_directory[PD_index].write_through = 0;
-	page_directory[PD_index].user_supervisor = 1;
+	page_directory[PD_index].user_supervisor = 0;
 	page_directory[PD_index].page_size = 1;
 	page_directory[PD_index].global_page = 1;
 	page_directory[PD_index].read_write = 1;
 	page_directory[PD_index].present = 1;
 
 	return;
+}
+
+/*****************************************************************
+ *
+ * 	flush_tlb
+ *  DESCRIPTION:
+ *          This function utilizes assembly linkage to flush the tlb
+ *  INPUTs: none
+ *  OUTPUT: none
+ *  SIDE EFFECTS: write 0 to the page directory register CR3
+ *  SOURCE: http://wiki.osdev.org/TLB
+ *
+****************************************************************/
+
+void flush_tlb()
+{
+	asm volatile (
+                 "movl $0, %%eax;"
+								 "movl %%eax, %%cr3;"
+                	:
+									:
+									: "eax"
+                 );
 }

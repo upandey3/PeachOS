@@ -89,7 +89,7 @@ restore_all:
   /* restore all flags and registers in the correct order */
   popfl
   popal
-  popl %ds // FIX HERE
+  popl %ds
   popl %es
   popl %fs
   /* unmask all interrupts and call iret */
