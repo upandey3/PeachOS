@@ -72,7 +72,6 @@ sysCall_handler:
   /* Check to see whether value in eax is valid i.e. whether
       the call number placed in eax by 'int $0x80' is valid
       or not */
-
   subl $1, %eax
   cmpl $10, %eax
   jae invalid_call             /* if value in eax is greater than 10 */
@@ -89,7 +88,7 @@ restore_all:
   /* restore all flags and registers in the correct order */
   popfl
   popal
-  popl %ds
+  popl %ds // FIX HERE
   popl %es
   popl %fs
   /* unmask all interrupts and call iret */

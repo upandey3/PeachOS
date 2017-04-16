@@ -178,9 +178,6 @@ entry (unsigned long magic, unsigned long addr)
 	// printf("Enabling Terminal\n");
 	terminal_init();
 
-	//int * x;
-	//*x = 52;
-
 	/* Execute the first program (`shell') ... */
 	//call_sys_halt(2);
 

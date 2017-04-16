@@ -42,64 +42,70 @@ uint8_t available_processes[MAX_PROCESSES] = {AVAILABLE, AVAILABLE};
  *
  * Source: MP3 Documentation, APPENDIX B
 */
-int32_t SYS_HALT (uint8_t status)
+int32_t SYS_HALT(uint8_t status)
 {
-     int index;
-     int retval;
+    int index = 0;
+    int retval;
 
-     cli();
+    cli();
 
-     pcb_t * current_pcb = get_curr_pcb();
-     pcb_t * parent_pcb  = get_curr_pcb_process((uint8_t)(current_pcb->parent_process_id));
+    pcb_t * current_pcb = get_curr_pcb();
+    pcb_t * parent_pcb  = get_curr_pcb_process((uint8_t)(current_pcb->parent_process_id));
 
-     available_processes[(uint8_t)current_pcb->process_id] = NOT_AVAILABLE;
+    available_processes[(uint8_t)current_pcb->process_id] = NOT_AVAILABLE;
 
-     while (index < MAX_OPEN_FILES)
-     {
-         if (current_pcb->open_files[index].flags == AVAILABLE)
-         {
-             retval = SYS_CLOSE(index);
-         }
-         current_pcb->open_files[index].flags = NOT_AVAILABLE;
-         current_pcb->open_files[index].file_jumptable = closed_table;
-         index++;
-      }
+    while (index < MAX_OPEN_FILES)
+    {
+        if (current_pcb->open_files[index].flags == NOT_AVAILABLE)
+        {
+            retval = SYS_CLOSE(index);
+        }
+        current_pcb->open_files[index].flags = AVAILABLE;
+        current_pcb->open_files[index].file_jumptable = closed_table;
+        index++;
+    }
 
-     /* If we are trying to halt the last process in the terminal,
-       then execute shell again
-       SOURCE: https://piazza.com/class/iwy7snh02335on?cid=911 */
+    /* If we are trying to halt the last process in the terminal,
+      then execute shell again
+      SOURCE: https://piazza.com/class/iwy7snh02335on?cid=911 */
 
     if (current_pcb->process_id == current_pcb->parent_process_id)
-   	{
-   		SYS_EXECUTE((uint8_t *)"shell");
-   	}
+  	{
+  		SYS_EXECUTE((uint8_t *)"shell");
+  	}
 
     tss.ss0 = KERNEL_DS;
-    tss.esp0 = current_pcb->parent_stack_pointer;
+	  tss.esp0 = (_8MB - _8KB * (current_pcb->parent_process_id + 1)) - 4;
+
+    // uint8_t executable_temp_buf[4];
+    //
+    // read_data(dir_entry.inode, ELF_EIP_START, executable_temp_buf, READ_SIZE); // 24-27 DOES MATTER, EIP
+    //
+    // elf_eip = *((uint32_t*) executable_temp_buf);
+    //
+    // init_page((uint32_t)elf_eip, (uint32_t)0x800000);
 
     sti();
 
-asm volatile ("                 \n\
-    cli                         \n\
-    pushl $0x2B                 \n\
-    movl %1, %%eax              \n\
-    pushl %%eax                 \n\
-    sti                         \n\
-    pushfl                      \n\
-    popl %%eax                  \n\
-    orl $0x3200, %%eax          \n\
-    pushl %%eax                 \n\
-    pushl $0x23                 \n\
-    movl %0, %%eax              \n\
-    pushl %%eax                 \n\
-    iret                        \n\
-    "
-    :
-    : "r" (elf_eip), "r" (((elf_eip & 0xFFC00000) + (_8MB >> 1)) - 4)
-    : "eax"
-);
-
-    printf("Reached end of HALT! \n" );
+    asm volatile ("                 \n\
+      cli                         \n\
+      pushl $0x2B                 \n\
+      movl %1, %%eax              \n\
+      pushl %%eax                 \n\
+      sti                         \n\
+      pushfl                      \n\
+      popl %%eax                  \n\
+      orl $0x3200, %%eax           \n\
+      pushl %%eax                 \n\
+      pushl $0x23                 \n\
+      movl %0, %%eax              \n\
+      pushl %%eax                 \n\
+      iret                        \n\
+      "
+      :
+      : "r" (parent_pcb->stack_pointer), "r" (((parent_pcb->stack_pointer & 0xFFC00000) + (_8MB >> 1)) - 4)
+      : "eax"
+    );
 
     return 0;
 }
@@ -267,6 +273,8 @@ int32_t SYS_EXECUTE(const uint8_t* command)
 
 
     // SS, ESP, EFLAGS, CS, EIP
+    // printf("works14\n");
+    // printf("CURR_PCB: %x\n", pcb_new);
 
     asm volatile ("                 \n\
         cli                         \n\
@@ -333,6 +341,7 @@ int32_t SYS_READ(int32_t fd, void* buf, int32_t nbytes)
 */
 int32_t SYS_WRITE(int32_t fd, const void* buf, int32_t nbytes)
 {
+// MAKE SURE WRITE FUNCTIONS ARE GOOD IN THE JUMP TABLES
     printf("in write\n");
     uint32_t vrft = fd;
 

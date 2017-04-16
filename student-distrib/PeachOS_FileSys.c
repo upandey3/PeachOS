@@ -443,31 +443,6 @@ int32_t write_file(int32_t fd, const void * buf, int32_t nbytes){
  *								file descriptor), return -1 if unable to open file
 */
 int32_t open_directory(const uint8_t * dname){
-//
-	//inode_t * dest_inode;
-    //uint32_t * inode_data_array;
-    //uint32_t file_length, file_inode, file_position;
-    //uint32_t num_bytes, new_pos;
-    //pcb_t * curr_pcb;
-//
-    //if (!buf || fd < FIRST_FD || fd > LAST_FD || !nbytes)
-    //    return -1;
-//
-    //curr_pcb = get_curr_pcb();
-    //file_inode = curr_pcb->open_files[fd].inode;
-    //file_position = curr_pcb->open_files[fd].file_position;
-//
-    //dest_inode = inodes + file_inode;
-    //inode_data_array = (uint32_t *)dest_inode;
-    //file_length = inode_data_array[0];
-//
-    //if (file_position >= file_length)
-    //    return 0;
-//
-    //num_bytes = read_data(file_inode, file_position, buf, nbytes);
-    //new_pos = num_bytes + file_position;
-    //curr_pcb->open_files[fd].file_position = new_pos >= file_length ? 0 : new_pos;
-    //return num_bytes;
     return 0;
 }
 /*
@@ -493,10 +468,33 @@ int32_t close_directory(int32_t fd){
  *  OUTPUT: none
  *  RETURN VALUE: number from bytes copied to buf, -1 if unsuccessful
 */
-int32_t read_directory(int32_t fd, void * buf, int32_t nbytes){
+int32_t read_directory(int32_t fd, void * buf, int32_t nbytes)
+{
 
-	printf("test\n");
-	terminal_write(fd, "__LINE__", sizeof("__LINE__"));
+	inode_t * dest_inode;
+    uint32_t * inode_data_array;
+    uint32_t file_length, file_inode, file_position;
+    uint32_t num_bytes, new_pos;
+    pcb_t * curr_pcb;
+
+    if (!buf || fd < FIRST_FD || fd > LAST_FD || !nbytes)
+        return -1;
+
+    curr_pcb = get_curr_pcb();
+    file_inode = curr_pcb->open_files[fd].inode;
+    file_position = curr_pcb->open_files[fd].file_position;
+
+    dest_inode = inodes + file_inode;
+    inode_data_array = (uint32_t *)dest_inode;
+    file_length = inode_data_array[0];
+
+    if (file_position >= file_length)
+        return 0;
+
+    num_bytes = read_data(file_inode, file_position, buf, nbytes);
+    new_pos = num_bytes + file_position;
+    curr_pcb->open_files[fd].file_position = new_pos >= file_length ? 0 : new_pos;
+    return num_bytes;
 
 	return 0;
 }

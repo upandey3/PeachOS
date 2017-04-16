@@ -45,6 +45,7 @@ INTERRUPT_HANDLER (ALIGNMENT_CHECK, "ALIGNMENT CHECK");
 INTERRUPT_HANDLER (MACHINE_CHECK, "MACHINE CHECK");
 INTERRUPT_HANDLER (SIMD_FLOATING_POINT_EXCEPTION, "SIMD FLOATING POINT EXCEPTION");
 INTERRUPT_HANDLER (UNDEFINED_INTERRUPT, "Interrupt not defined by our OS!");
+INTERRUPT_HANDLER (SYSTEM_CALL, "System Call Generated!");
 
 /* Set to 0 1 1 0 0 (call gate) simply allows privilege transfer from lower to higher */
 
@@ -76,7 +77,7 @@ void initialize_idt () {
     idt[i].dpl = 0x0;                                                           // privilege level set to 0
     idt[i].present = 0x1;
 
-    if (i > PIC_INT && i != SYS_CAL)
+    if (i > PIC_INT)
     {
       idt[i].reserved3 = 0x1;
       SET_IDT_ENTRY(idt[i], UNDEFINED_INTERRUPT);                               // if index is greater than 0x20, set the IDT entry to UNDEFINED_INTERRUPT
