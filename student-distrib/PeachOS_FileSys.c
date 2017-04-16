@@ -8,21 +8,23 @@ uint32_t num_datablocks;
 uint32_t bbAddr;
 uint32_t dataStart;
 uint32_t fs_ctrl_3;
+uint32_t directoy_flag;
+uint32_t self_file_flag;
 
 //comment block needed
 void fileSystem_init(uint32_t fsAddr)
 {
-  bbAddr = fsAddr;
-  printf("fsAddr is %d", fsAddr);
-  bootblock_t* bb = (bootblock_t*)(bbAddr);
+    bbAddr = fsAddr;
+    printf("fsAddr is %d", fsAddr);
+    bootblock_t* bb = (bootblock_t*)(bbAddr);
 
-  num_directories = bb->num_directories;
-  num_inodes = bb->num_inodes;
-  num_datablocks = bb->num_datablocks;
+    num_directories = bb->num_directories;
+    num_inodes = bb->num_inodes;
+    num_datablocks = bb->num_datablocks;
 
-  dirEntries = (dentry_t*)(bb->dirEntries);
-  inodes = (inode_t*)(bbAddr + BLOCK_SIZE);
-  dataStart = (uint32_t)(inodes + num_inodes);
+    dirEntries = (dentry_t*)(bb->dirEntries);
+    inodes = (inode_t*)(bbAddr + BLOCK_SIZE);
+    dataStart = (uint32_t)(inodes + num_inodes);
 }
 
 /*
@@ -38,24 +40,22 @@ void fileSystem_init(uint32_t fsAddr)
 
 int32_t read_dentry_by_name (const uint8_t* fname, dentry_t* dentry)
 {
-  int i;
-  int len = strlen((int8_t*)(fname));
-  if (len > FILENAMESIZE)
-	{
-		return -1;
-	}
+    int i;
+    int len = strlen((int8_t*)(fname));
+    if (len > FILENAMESIZE)
+    	return -1;
 
-  for (i = 0; i < DIRENTRIES; i++)
-  {
-    if ((strncmp(dirEntries[i].filename,  (int8_t*)(fname), len)) == 0)
+    for (i = 0; i < DIRENTRIES; i++)
     {
-       strncpy(dentry->filename, dirEntries[i].filename, len);
-       dentry->filetype = dirEntries[i]. filetype;
-       dentry->inode = dirEntries[i].inode;
-       return 0;
+        if ((strncmp(dirEntries[i].filename,  (int8_t*)(fname), len)) == 0)
+        {
+           strncpy(dentry->filename, dirEntries[i].filename, len);
+           dentry->filetype = dirEntries[i]. filetype;
+           dentry->inode = dirEntries[i].inode;
+           return 0;
+        }
     }
-  }
-  return -1;
+    return -1;
 }
 
 /*
@@ -71,15 +71,15 @@ int32_t read_dentry_by_name (const uint8_t* fname, dentry_t* dentry)
 
 int32_t read_dentry_by_index(uint32_t index, dentry_t* dentry)
 {
-  if (index >= DIRENTRIES || index < 0)
-  {
+    if (index >= DIRENTRIES || index < 0)
+    {
     return -1;
-  }
-  strncpy(dentry->filename, dirEntries[index].filename, FILENAMESIZE);
-  dentry->filetype = dirEntries[index].filetype;
-  dentry->inode = dirEntries[index].inode;
+    }
+    strncpy(dentry->filename, dirEntries[index].filename, FILENAMESIZE);
+    dentry->filetype = dirEntries[index].filetype;
+    dentry->inode = dirEntries[index].inode;
 
-  return 0;
+    return 0;
 }
 
 
@@ -101,44 +101,44 @@ int32_t read_dentry_by_index(uint32_t index, dentry_t* dentry)
 int32_t read_data(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t length)
 {
 	int i, k;
-  uint32_t file_length, db_start_idx, db_start_byte_idx;
+    uint32_t file_length, db_start_idx, db_start_byte_idx;
 	uint32_t num_bytes_to_copy, num_db_needed, byte_index, * inode_data_array;
 	char * byte_array; inode_t * db_array, * dest_inode;
 
-  //Checking if inode is invalid (if the index is greater than N - 1)
+    //Checking if inode is invalid (if the index is greater than N - 1)
 	if (inode >= num_inodes)
 		return -1;
 
 	dest_inode = inodes + inode; //points to the inode
 	inode_data_array = (uint32_t *)dest_inode; //make an array of data block indices
-  file_length = inode_data_array[0];//first index is file length
+    file_length = inode_data_array[0];//first index is file length
 	inode_data_array += 1;
 
- if (file_length == 0 || length == 0)
-    return 0;
+    if (file_length == 0 || length == 0)
+        return 0;
 
 	//Check if start address is greater than file length
 	if (offset >= file_length)
-			return -1;
+		return 0;
 
 	//make a data block array and get first data block, and first byte index
 	db_array = (inode_t *) bbAddr + num_inodes + 1; //data blocks array
 	db_start_idx = offset / (BLOCK_SIZE); // starting data block index
-  db_start_byte_idx = offset % (BLOCK_SIZE); // starting byte index of data block
+    db_start_byte_idx = offset % (BLOCK_SIZE); // starting byte index of data block
 
 	num_bytes_to_copy = (file_length - 1 < length + offset - 1)? file_length - offset : length;
 	num_db_needed = ((num_bytes_to_copy + db_start_byte_idx - 1)/ BLOCK_SIZE) + 1;
 
 	k = 0; byte_index = db_start_byte_idx;
-  for(i = db_start_idx; i < (db_start_idx + num_db_needed); i++){
+    for(i = db_start_idx; i < (db_start_idx + num_db_needed); i++){
 
-		byte_array = (char *)(db_array + inode_data_array[i]); //byte array of current data block
-    while (byte_index < BLOCK_SIZE && k < num_bytes_to_copy)
-			buf[k++] = byte_array[byte_index++];
-    byte_index = 0;
+    	byte_array = (char *)(db_array + inode_data_array[i]); //byte array of current data block
+        while (byte_index < BLOCK_SIZE && k < num_bytes_to_copy)
+        		buf[k++] = byte_array[byte_index++];
+        byte_index = 0;
 
-	}
-  return num_bytes_to_copy;
+    }
+    return num_bytes_to_copy;
 }
 
 /*
@@ -175,7 +175,7 @@ int32_t print_directory()
 			file_len = strlen((char*)(toprint.filename));
 			if(file_len > FILENAMESIZE) file_len = FILENAMESIZE;
 
-      //number of bytes in the file
+            //number of bytes in the file
 			itoa(*(uint32_t*)(inodes+toprint.inode), (char*)byte_string, 10);
 			itoa(toprint.filetype, (char*)file_type_string, 10); // file type
 
@@ -408,14 +408,7 @@ int32_t read_file(int32_t fd, void * buf, int32_t nbytes){
     curr_pcb->open_files[fd].file_position = new_pos >= file_length ? 0 : new_pos;
     return num_bytes;
 }
-/* File Descriptor Struct */
 
-/*typedef struct {
-    jump_table_ops file_jumptable;
-    int32_t inode;
-    int32_t file_position;
-    int32_t flags;
-} file_descriptor_t;*/
 
 /*
  * write_file
@@ -443,31 +436,8 @@ int32_t write_file(int32_t fd, const void * buf, int32_t nbytes){
  *								file descriptor), return -1 if unable to open file
 */
 int32_t open_directory(const uint8_t * dname){
-//
-	//inode_t * dest_inode;
-    //uint32_t * inode_data_array;
-    //uint32_t file_length, file_inode, file_position;
-    //uint32_t num_bytes, new_pos;
-    //pcb_t * curr_pcb;
-//
-    //if (!buf || fd < FIRST_FD || fd > LAST_FD || !nbytes)
-    //    return -1;
-//
-    //curr_pcb = get_curr_pcb();
-    //file_inode = curr_pcb->open_files[fd].inode;
-    //file_position = curr_pcb->open_files[fd].file_position;
-//
-    //dest_inode = inodes + file_inode;
-    //inode_data_array = (uint32_t *)dest_inode;
-    //file_length = inode_data_array[0];
-//
-    //if (file_position >= file_length)
-    //    return 0;
-//
-    //num_bytes = read_data(file_inode, file_position, buf, nbytes);
-    //new_pos = num_bytes + file_position;
-    //curr_pcb->open_files[fd].file_position = new_pos >= file_length ? 0 : new_pos;
-    //return num_bytes;
+    self_file_flag = 1;
+    directoy_flag = 1;
     return 0;
 }
 /*
@@ -493,12 +463,38 @@ int32_t close_directory(int32_t fd){
  *  OUTPUT: none
  *  RETURN VALUE: number from bytes copied to buf, -1 if unsuccessful
 */
+
 int32_t read_directory(int32_t fd, void * buf, int32_t nbytes){
 
-	printf("test\n");
-	terminal_write(fd, "__LINE__", sizeof("__LINE__"));
+    pcb_t * curr_pcb;
+    uint32_t file_inode;
+    // printf("File Sys Line no %d\n", __LINE__);
+    if (!buf || fd < FIRST_FD || fd > LAST_FD || !nbytes)
+        return -1;
+	// get inode from pcb
+    curr_pcb = get_curr_pcb();
+    file_inode = curr_pcb->open_files[fd].inode;
 
-	return 0;
+    if(dirEntries[num_directories-1].inode == file_inode && !directoy_flag)
+    	return 0;
+    // find dentry of matching inode in boot block
+    int i;
+    for(i = 1; i < num_directories; i++){
+        if (self_file_flag){
+            i--;
+            self_file_flag = 0;
+        }
+		if(dirEntries[i].inode == file_inode){
+		    // copy file name from dentry, save inode of next dentry to pcb
+			strncpy((char*)buf, (char*)dirEntries[i].filename, FILENAMESIZE);
+			if(i<num_directories-1)
+				curr_pcb->open_files[fd].inode = dirEntries[i+1].inode;
+			else
+				directoy_flag = 0;
+		    return sizeof(dirEntries[i].filename);
+		}
+    }
+    return -1;
 }
 /*
  * write_directory

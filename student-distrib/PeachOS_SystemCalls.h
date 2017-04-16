@@ -79,11 +79,11 @@ typedef struct {
 typedef struct {
     file_descriptor_t open_files[MAX_OPEN_FILES];
     uint8_t filenames[MAX_OPEN_FILES][MAX_FILENAME_SIZE];
-    uint8_t process_id;
+    int8_t process_id;
     uint8_t args[argsize];
     uint32_t stack_pointer;
     uint32_t base_pointer;
-    uint8_t parent_process_id;
+    int8_t parent_process_id;
     uint32_t parent_stack_pointer;
     uint32_t parent_base_pointer;
     uint8_t state;
