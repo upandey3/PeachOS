@@ -19,15 +19,15 @@
  *          http://www.geeksforgeeks.org/function-pointer-in-c/
  */
 /* stdin, file operation table */
-jump_table_ops stdin_table = {terminal_open, terminal_read, dummy_function, terminal_close};
+jump_table_ops stdin_table = {terminal_read, dummy_function, terminal_open, terminal_close};
 /* stdout, file operation table */
-jump_table_ops stdout_table = {terminal_open, dummy_function, terminal_write, terminal_close};
+jump_table_ops stdout_table = {dummy_function, terminal_write, terminal_open, terminal_close};
 /* rtc, file operation table */
-jump_table_ops rtc_table = {rtc_open, rtc_read, rtc_write, rtc_close};
+jump_table_ops rtc_table = {rtc_read, rtc_write, rtc_open, rtc_close};
 /* file, file operation table */
-jump_table_ops file_table = {open_file, read_file, write_file, close_file};
+jump_table_ops file_table = {read_file, write_file, open_file, close_file};
 /* directory, file operation table */
-jump_table_ops directory_table = {open_directory, read_directory, write_directory, close_directory};
+jump_table_ops directory_table = {read_directory, write_directory, open_directory, close_directory};
 /* closed file, file operation table */
 jump_table_ops closed_table = {dummy_function, dummy_function, dummy_function, dummy_function};
 
@@ -107,6 +107,8 @@ asm volatile ("                 \n\
 */
 int32_t SYS_EXECUTE(const uint8_t* command)
 {
+
+
     // using these two temp variables for getting filesize
     uint32_t size_file_name = 0;
     uint8_t file_name[32] = {'\0'};
@@ -144,10 +146,14 @@ int32_t SYS_EXECUTE(const uint8_t* command)
         i++;
     }
     /*
-	 * Read the file, fill in the dir_entry
-	 * Use the inode to send to read_data function to get the first four bytes
+     * Read the file, fill in the dir_entry
+     * Use the inode to send to read_data function to get the first four bytes
      * We need to check if they are DEL E L F
-	 */
+     */
+
+
+
+
     if(read_dentry_by_name(file_name, &dir_entry) == -1) // find the dir_entry from the file system
     {
         terminal_write(1, "Didn't work\n", sizeof("Didn't work\n"));
@@ -155,28 +161,35 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     }
     else
     {
-        terminal_write(1, "Worked\n", sizeof("Worked\n"));
-        terminal_write(1, (uint8_t *)file_name, size_file_name + 1);
+     //   terminal_write(1, "Worked\n", sizeof("Worked\n"));
+     //   terminal_write(1, (uint8_t *)file_name, size_file_name + 1);
         // get the first four characters read from the file, if they are DEL E L F then its executable
         if(read_data(dir_entry.inode, 0, executable_temp_buf, 4) == -1)
-    	{
-    		return -1;
-    	}
-    	/* Checking to see if it's executable, strcmp == 0 means they are same, another number means they are not */
-    	if(strncmp((const int8_t*)executable_temp_buf, (const int8_t*)executable_check, 4) != 0)
-    	{
-    		return -1;
-    	}
+        {
+            return -1;
+        }
+        /* Checking to see if it's executable, strcmp == 0 means they are same, another number means they are not */
+
+
+
+
+        if(strncmp((const int8_t*)executable_temp_buf, (const int8_t*)executable_check, 4) != 0)
+        {
+            return -1;
+        }
     }
 
     read_data(dir_entry.inode, ELF_EIP_START, executable_temp_buf, READ_SIZE); // 24-27 DOES MATTER, EIP
+
     elf_eip = *((uint32_t*) executable_temp_buf);
+
     init_page((uint32_t)elf_eip, (uint32_t)0x800000);
 
-    printf("PDE: %d\n", page_directory[elf_eip >> PDBITSH].accessed);
+ //   printf("PDE: %d\n", page_directory[elf_eip >> PDBITSH].accessed);
 
     uint32_t file_offset = 0;
     uint8_t* shell_base = (uint8_t*)0x08048000;
+
     uint32_t file_length_size = inodes[dir_entry.inode].filelength;
     uint32_t file_length;
     while((file_length = read_data(dir_entry.inode, file_offset, (uint8_t*)shell_base + file_offset, file_length_size - file_offset)) > 0)
@@ -184,7 +197,7 @@ int32_t SYS_EXECUTE(const uint8_t* command)
         file_offset = file_offset + file_length;
     }
 
-    printf("PDE Check: %d\n", page_directory[elf_eip >> PDBITSH].present);
+   // printf("PDE Check: %d\n", page_directory[elf_eip >> PDBITSH].present);
 
     page_directory[elf_eip >> PDBITSH].accessed = 0;
 
@@ -208,7 +221,7 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     strcpy((int8_t*)pcb_new->args, (int8_t*)arg_buffer);
 
     tss.ss0 = KERNEL_DS; // always  the same
-    tss.esp0 = (_8MB - _8KB * (pcb_new->process_id)) - 4;
+    tss.esp0 = (_8MB - _8KB * (pcb_new->process_id + 1)) - 4;
 
 
     /* What I Did
@@ -243,10 +256,13 @@ int32_t SYS_EXECUTE(const uint8_t* command)
      *      http://www.intel.com/Assets/en_US/PDF/manual/253665.pdf INTEL MANUAL 6.4
      *      https://en.wikipedia.org/wiki/Inline_assembler
     */
-    printf("works13\n");
-    printf("EIP: %x\n", elf_eip);
+
+
 
     // SS, ESP, EFLAGS, CS, EIP
+    // printf("works14\n");
+    // printf("CURR_PCB: %x\n", pcb_new);
+
     asm volatile ("                 \n\
         cli                         \n\
         pushl $0x2B                 \n\
@@ -266,7 +282,7 @@ int32_t SYS_EXECUTE(const uint8_t* command)
         : "r" (elf_eip), "r" (((elf_eip & 0xFFC00000) + (_8MB >> 1)) - 4)
         : "eax"
     );
-    printf("works14\n");
+
     return 0;
 }
 
@@ -283,16 +299,22 @@ int32_t SYS_EXECUTE(const uint8_t* command)
 */
 int32_t SYS_READ(int32_t fd, void* buf, int32_t nbytes)
 {
-// MAKE SURE READ FUNCTIONS ARE GOOD IN THE JUMP TABLES
-    // pcb_t *curr_pcb = get_curr_pcb();
-    // if (fd > LAST_FD || fd < 0 || fd == 1 || !buf ||
-    //     curr_pcb->open_files[fd].flags == AVAILABLE)
-    //     return -1;
-    // else
-    //     return curr_pcb->open_files[fd].file_jumptable.fd_read(0, (uint8_t *)buf, nbytes);
-    terminal_read(fd, buf, nbytes);
-}
+    printf("in write\n");
+    uint32_t vrft = fd;
 
+    pcb_t *curr_pcb = get_curr_pcb();
+    if (vrft > LAST_FD || curr_pcb->open_files[vrft].flags == AVAILABLE)
+    {
+        printf("failed read\n");
+        return -1;
+    }
+    else
+    {
+        printf("past read\n");
+        return curr_pcb->open_files[vrft].file_jumptable.fd_read(vrft, buf, nbytes);
+    }
+    return 0;
+}
 /* System_Call : WRITE
  *
  * System_Call_Input: fd, buf, nbytes
@@ -307,13 +329,21 @@ int32_t SYS_READ(int32_t fd, void* buf, int32_t nbytes)
 int32_t SYS_WRITE(int32_t fd, const void* buf, int32_t nbytes)
 {
 // MAKE SURE WRITE FUNCTIONS ARE GOOD IN THE JUMP TABLES
-    // pcb_t *curr_pcb = get_curr_pcb();
-    // if (fd > LAST_FD || fd <= 0 || !buf ||
-    //     curr_pcb->open_files[fd].flags == AVAILABLE)
-    //     return -1;
-    // else
-    //     return curr_pcb->open_files[fd].file_jumptable.fd_write(1, buf, nbytes);
-    terminal_write(fd, buf, nbytes);
+    printf("in write\n");
+    uint32_t vrft = fd;
+
+    pcb_t *curr_pcb = get_curr_pcb();
+    if (vrft > LAST_FD || curr_pcb->open_files[vrft].flags == AVAILABLE)
+    {
+        printf("failed write\n");
+        return -1;
+    }
+    else
+    {
+        printf("past write\n");
+        return curr_pcb->open_files[vrft].file_jumptable.fd_write(vrft, buf, nbytes);
+    }
+    return 0;
 }
 
 /* System_Call : OPEN
@@ -327,17 +357,22 @@ int32_t SYS_WRITE(int32_t fd, const void* buf, int32_t nbytes)
 */
 int32_t SYS_OPEN(const uint8_t* filename)
 {
+    printf("filename is %s\n", filename);
     // using these two temp variables for getting filesize
     uint8_t fname[MAX_FILENAME_SIZE] = {'\0'};
     uint32_t i = 0;
     uint32_t j = 0;
     dentry_t dir_entry;
     // iterating the passed argument array to get the size of "filename"
+
     while(i < MAX_FILENAME_SIZE && filename[i] != ' ')
     {
         fname[i] = filename[i];
         i++;
     }
+
+    printf("fname is %s\n", fname);
+
     pcb_t *curr_pcb = get_curr_pcb();
     // find the dir_entry from the file system
     if (read_dentry_by_name(fname, &dir_entry) == -1)
@@ -546,6 +581,15 @@ pcb_t *pcb_init(uint32_t process_num)
     curr_pcb->open_files[0].file_jumptable = stdin_table;
     curr_pcb->open_files[1].file_jumptable = stdout_table;
 
+    curr_pcb->open_files[0].flags = NOT_AVAILABLE;
+    curr_pcb->open_files[1].flags = NOT_AVAILABLE;
+    curr_pcb->open_files[2].flags = AVAILABLE;
+    curr_pcb->open_files[3].flags = AVAILABLE;
+    curr_pcb->open_files[4].flags = AVAILABLE;
+    curr_pcb->open_files[5].flags = AVAILABLE;
+    curr_pcb->open_files[6].flags = AVAILABLE;
+    curr_pcb->open_files[7].flags = AVAILABLE;
+
     curr_pcb->process_id = process_num;
 
     curr_pcb->parent_base_pointer = parent_pcb->base_pointer;
@@ -557,11 +601,6 @@ pcb_t *pcb_init(uint32_t process_num)
     else
         curr_pcb->parent_process_id = parent_pcb->process_id;
 
-    printf("CURR_PCB : %x\n",curr_pcb);
-    printf("CURR_PCB->process_id: %x\n", curr_pcb->process_id);
-    printf("CURR_PCB->stackPointer : %x\n",curr_pcb->stack_pointer);
-    printf("CURR_PCB->basePointer : %x\n",curr_pcb->base_pointer);
-    printf("PARENT_PCB->stackPointer : %x\n",curr_pcb->parent_stack_pointer);
   return curr_pcb;
 }
 

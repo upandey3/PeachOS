@@ -48,9 +48,9 @@
  *          http://www.microchip.com/forums/m798465.aspx
 */
 typedef struct {
-    int32_t (*fd_open)(const uint8_t* fname);
     int32_t (*fd_read)(int32_t fd, void* buffer, int32_t nbytes);
     int32_t (*fd_write)(int32_t fd, const void* buffer, int32_t nbytes);
+    int32_t (*fd_open)(const uint8_t* fname);
     int32_t (*fd_close)(int32_t fd);
 } jump_table_ops;
 
