@@ -50,18 +50,12 @@ int32_t SYS_HALT(uint8_t status)
     cli();
 
     pcb_t * current_pcb = get_curr_pcb();
-    pcb_t * parent_pcb  = get_curr_pcb_process((uint8_t)(current_pcb->parent_process_id));
 
-    available_processes[(uint8_t)current_pcb->process_id] = NOT_AVAILABLE;
+    available_processes[(uint8_t)current_pcb->process_id] = AVAILABLE;
 
     while (index < MAX_OPEN_FILES)
     {
-        if (current_pcb->open_files[index].flags == NOT_AVAILABLE)
-        {
-            retval = SYS_CLOSE(index);
-        }
-        current_pcb->open_files[index].flags = AVAILABLE;
-        current_pcb->open_files[index].file_jumptable = closed_table;
+        retval = SYS_CLOSE(index);
         index++;
     }
 
@@ -69,34 +63,24 @@ int32_t SYS_HALT(uint8_t status)
       then execute shell again
       SOURCE: https://piazza.com/class/iwy7snh02335on?cid=911 */
 
-    if (current_pcb->process_id == current_pcb->parent_process_id)
-  	{
-  		SYS_EXECUTE((uint8_t *)"shell");
-  	}
-
     tss.ss0 = KERNEL_DS;
-	  tss.esp0 = (_8MB - _8KB * (current_pcb->parent_process_id + 1)) - 4;
+	  tss.esp0 = current_pcb->parent_stack_pointer;
 
     sti();
 
-    asm volatile ("               \n\
-      cli                         \n\
-      pushl $0x2B                 \n\
-      movl %1, %%eax              \n\
-      pushl %%eax                 \n\
-      pushfl                      \n\
-      popl %%eax                  \n\
-      orl $0x3200, %%eax          \n\
-      pushl %%eax                 \n\
-      pushl $0x23                 \n\
-      movl %0, %%eax              \n\
-      pushl %%eax                 \n\
-      iret                        \n\
-      "
-      :
-      : "r" (parent_pcb->stack_pointer), "r" (((parent_pcb->stack_pointer & 0xFFC00000) + (_8MB >> 1)) - 4)
-      : "eax"
-    );
+    if (current_pcb->parent_process_id == current_pcb->process_id || current_pcb->parent_process_id == -1)
+    {
+        SYS_EXECUTE((uint8_t *)"shell");
+    }
+
+    asm volatile (
+        "movl %0, %%ebp;"
+        "movl %1, %%esp;"
+        "jmp ret_from_halt;"
+        :
+        : "r"(current_pcb->parent_base_pointer), "r"(current_pcb->parent_stack_pointer)
+        : "eax", "ebx"
+        );
 
     return 0;
 }
@@ -154,13 +138,8 @@ int32_t SYS_EXECUTE(const uint8_t* command)
      * Use the inode to send to read_data function to get the first four bytes
      * We need to check if they are DEL E L F
      */
-
-
-
-
     if(read_dentry_by_name(file_name, &dir_entry) == -1) // find the dir_entry from the file system
     {
-        terminal_write(1, "Didn't work\n", sizeof("Didn't work\n"));
         return -1;
     }
     else
@@ -174,20 +153,25 @@ int32_t SYS_EXECUTE(const uint8_t* command)
         }
         /* Checking to see if it's executable, strcmp == 0 means they are same, another number means they are not */
 
-
-
-
         if(strncmp((const int8_t*)executable_temp_buf, (const int8_t*)executable_check, 4) != 0)
         {
             return -1;
         }
     }
 
+    uint32_t process_num = get_available_process_num(); // get the available process
+    if(process_num == -1)
+    return -1; // CANT DO ANYTHING, MAX PROCESS REACHED
+    uint32_t pcb_esp; // get esp into it
+    uint32_t pcb_ebp;
+
+    pcb_t* pcb_new = pcb_init(process_num);
+
     read_data(dir_entry.inode, ELF_EIP_START, executable_temp_buf, READ_SIZE); // 24-27 DOES MATTER, EIP
 
     elf_eip = *((uint32_t*) executable_temp_buf);
 
-    init_page((uint32_t)elf_eip, (uint32_t)0x800000);
+    init_page((uint32_t)elf_eip, (uint32_t)(_8MB + (pcb_new->process_id * _4MB)));
 
  //   printf("PDE: %d\n", page_directory[elf_eip >> PDBITSH].accessed);
 
@@ -205,22 +189,18 @@ int32_t SYS_EXECUTE(const uint8_t* command)
 
     page_directory[elf_eip >> PDBITSH].accessed = 0;
 
-    uint32_t process_num = get_available_process_num(); // get the available process
-    if(process_num == -1)
-        return -1; // CANT DO ANYTHING, MAX PROCESS REACHED
-    uint32_t pcb_esp; // get esp into it
-
-    pcb_t* pcb_new = pcb_init(process_num);
 
     // ESP -> EAX, EBP -> EBX
     asm volatile(
         "movl %%esp, %%eax;"
-        : "=a" (pcb_esp)
+        "movl %%ebp, %%ebx;"
+        : "=a" (pcb_esp), "=b"(pcb_ebp)
         :
         : "ebp", "esp"
         );
 
     pcb_new->parent_stack_pointer = pcb_esp;
+    pcb_new->parent_base_pointer = pcb_ebp;
 
     strcpy((int8_t*)pcb_new->args, (int8_t*)arg_buffer);
 
@@ -281,12 +261,10 @@ int32_t SYS_EXECUTE(const uint8_t* command)
         movl %0, %%eax              \n\
         pushl %%eax                 \n\
         iret                        \n\
-        "HERE:"                     \n\
-        "LEAVE"                     \n\
-        "RET"                       \n\
+        ret_from_halt:              \n\
         "
         :
-        : "r" (elf_eip), "r" (((elf_eip & 0xFFC00000) + (_8MB >> 1)) - 4)
+        : "r" (elf_eip), "r" (((elf_eip & 0xFFC00000) + (_4MB)) - 4)
         : "eax"
     );
 
@@ -306,18 +284,15 @@ int32_t SYS_EXECUTE(const uint8_t* command)
 */
 int32_t SYS_READ(int32_t fd, void* buf, int32_t nbytes)
 {
-    printf("in write\n");
     uint32_t vrft = fd;
 
     pcb_t *curr_pcb = get_curr_pcb();
     if (vrft > LAST_FD || curr_pcb->open_files[vrft].flags == AVAILABLE)
     {
-        printf("failed read\n");
         return -1;
     }
     else
     {
-        printf("past read\n");
         return curr_pcb->open_files[vrft].file_jumptable.fd_read(vrft, buf, nbytes);
     }
     return 0;
@@ -336,18 +311,15 @@ int32_t SYS_READ(int32_t fd, void* buf, int32_t nbytes)
 int32_t SYS_WRITE(int32_t fd, const void* buf, int32_t nbytes)
 {
 // MAKE SURE WRITE FUNCTIONS ARE GOOD IN THE JUMP TABLES
-    printf("in write\n");
     uint32_t vrft = fd;
 
     pcb_t *curr_pcb = get_curr_pcb();
     if (vrft > LAST_FD || curr_pcb->open_files[vrft].flags == AVAILABLE)
     {
-        printf("failed write\n");
         return -1;
     }
     else
     {
-        printf("past write\n");
         return curr_pcb->open_files[vrft].file_jumptable.fd_write(vrft, buf, nbytes);
     }
     return 0;
@@ -364,33 +336,34 @@ int32_t SYS_WRITE(int32_t fd, const void* buf, int32_t nbytes)
 */
 int32_t SYS_OPEN(const uint8_t* filename)
 {
-    printf("filename is %s\n", filename);
+    //printf("filename is %s\n", filename);
     // using these two temp variables for getting filesize
-    uint8_t fname[MAX_FILENAME_SIZE] = {'\0'};
+    // uint8_t fname[MAX_FILENAME_SIZE] = {'\0'};
+
+    // // iterating the passed argument array to get the size of "filename"
+    //
+    // while(i < MAX_FILENAME_SIZE && filename[i] != ' ')
+    // {
+    //     fname[i] = filename[i];
+    //     i++;
+    // }
+
     uint32_t i = 0;
-    uint32_t j = 0;
     dentry_t dir_entry;
-    // iterating the passed argument array to get the size of "filename"
-
-    while(i < MAX_FILENAME_SIZE && filename[i] != ' ')
-    {
-        fname[i] = filename[i];
-        i++;
-    }
-
-    printf("fname is %s\n", fname);
-
     pcb_t *curr_pcb = get_curr_pcb();
+    // printf("System_Call Line no %d\n", __LINE__);
+
     // find the dir_entry from the file system
-    if (read_dentry_by_name(fname, &dir_entry) == -1)
+    if (read_dentry_by_name(filename, &dir_entry) == -1)
         return -1;
     else
     {
-        // pcb_t *curr_pcb = get_curr_pcb(); // CHANGEd
         for (i = FIRST_FD; i <= LAST_FD; i++)
         {
             if (curr_pcb->open_files[i].flags == NOT_AVAILABLE)
             {
+                // printf("System_Call Line no %d\n", __LINE__);
+
                 if (i == LAST_FD) // If maximum number of files are open
                     return -1;
             }
@@ -399,35 +372,35 @@ int32_t SYS_OPEN(const uint8_t* filename)
                 // If an available FD is found, store the FD there
                 curr_pcb->open_files[i].flags = NOT_AVAILABLE;
                 curr_pcb->open_files[i].file_position = OFFSET0;
-                for(j = 0; j < MAX_FILENAME_SIZE; j++)
-                    curr_pcb->filenames[i][j] = fname[j];
+                curr_pcb->open_files[i].inode = dir_entry.inode;
                 break;
+                //
+                // for(j = 0; j < MAX_FILENAME_SIZE; j++)
+                //     curr_pcb->filenames[i][j] = filename[j];
             }
         }
     }
     switch (dir_entry.filetype)
     {
         case FILE:
-            if (open_file(fname) == 200) // CHANGE THIS TO -1
+            if (open_file(filename) == -1)
                 return -1;
-            curr_pcb->open_files[i].inode = dir_entry.inode;
             curr_pcb->open_files[i].file_jumptable = file_table;
             break;
         case DIR:
-            if (open_directory(fname) == 200) // CHANGE THIS TO -1
+            if (open_directory(filename) == -1)
                 return -1;
-            curr_pcb->open_files[i].inode = NULL;
             curr_pcb->open_files[i].file_jumptable = directory_table;
             break;
         case RTC:
-            if (rtc_open(fname) == 200) // CHANGE THIS TO -1
+            if (rtc_open(filename) == -1)
                 return -1;
-            curr_pcb->open_files[i].inode = NULL;
             curr_pcb->open_files[i].file_jumptable = rtc_table;
             break;
         default:
             break;
      }
+    printf("The inode for '.' is %d: In open, the fd for '.' is %d\n", curr_pcb->open_files[i].inode, i);
     return i;
 }
 /* System_Call : CLOSE
@@ -585,6 +558,7 @@ pcb_t *pcb_init(uint32_t process_num)
 {
     pcb_t *parent_pcb = get_curr_pcb();
     pcb_t *curr_pcb = get_curr_pcb_process((uint8_t)process_num);
+
     curr_pcb->open_files[0].file_jumptable = stdin_table;
     curr_pcb->open_files[1].file_jumptable = stdout_table;
 

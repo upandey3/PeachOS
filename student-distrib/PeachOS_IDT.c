@@ -19,6 +19,7 @@ void initialize_idt();
  * can call the interrupt handlers at runtime */
 #define INTERRUPT_HANDLER(interrupt_name, string) \
 void interrupt_name () { \
+  cli();                    \
   printf("%s\n", #string); \
   while(1); \
 }
