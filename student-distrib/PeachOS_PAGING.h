@@ -8,6 +8,7 @@
 
 #define PD_MASK 0xFFC00000
 #define OFFSET  0xFFFFF000
+
 #define PDBITSH 22
 #define PTBITSH 12
 
@@ -59,5 +60,8 @@ void enablePaging (void);
 
 /* Initializes a new page directory index for a new process */
 void init_page (uint32_t va, uint32_t pa);
+
+/* This function uses assembly linkage to flush the tlb */
+void flush_tlb();
 
 #endif /* _PAGING_H */

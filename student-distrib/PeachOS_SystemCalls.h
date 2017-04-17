@@ -18,7 +18,7 @@
 #define FIRST_FD 2
 #define LAST_FD 7
 
-#define OFFSET0 0x0
+#define OFFSET0 0
 
 #define FILE 2
 #define DIR 1
@@ -48,9 +48,9 @@
  *          http://www.microchip.com/forums/m798465.aspx
 */
 typedef struct {
-    int32_t (*fd_open)(const uint8_t* fname);
     int32_t (*fd_read)(int32_t fd, void* buffer, int32_t nbytes);
     int32_t (*fd_write)(int32_t fd, const void* buffer, int32_t nbytes);
+    int32_t (*fd_open)(const uint8_t* fname);
     int32_t (*fd_close)(int32_t fd);
 } jump_table_ops;
 
@@ -79,13 +79,14 @@ typedef struct {
 typedef struct {
     file_descriptor_t open_files[MAX_OPEN_FILES];
     uint8_t filenames[MAX_OPEN_FILES][MAX_FILENAME_SIZE];
-    uint8_t process_id;
+    int8_t process_id;
+    int8_t parent_process_id;
     uint8_t args[argsize];
     uint32_t stack_pointer;
     uint32_t base_pointer;
-    uint8_t parent_process_id;
     uint32_t parent_stack_pointer;
     uint32_t parent_base_pointer;
+    uint32_t parent_pcb;
     uint8_t state;
     uint8_t timeslice;
 } pcb_t;
@@ -105,7 +106,7 @@ int32_t SYS_SIGRETURN(void);
 
 /*** HELPER FUNCTIONS ***/
 pcb_t *get_curr_pcb();
-uint32_t get_available_process_num();
+int32_t get_available_process_num();
 uint32_t set_available_process_num();
 int32_t dummy_function();
 pcb_t *pcb_init();
