@@ -356,7 +356,6 @@ int32_t print_file_by_index(uint32_t file_num)
 */
 int32_t open_file(const uint8_t * filename)
 {
-<<<<<<< HEAD
 	// pcb_t* curr_pcb = get_curr_pcb();
 	// int i;
     //
@@ -369,20 +368,6 @@ int32_t open_file(const uint8_t * filename)
 	// 	}
 	// }
 	return 0;
-=======
-	pcb_t* curr_pcb = get_curr_pcb();
-	int i;
-
-	for(i=2; i<7; i++)
-	{
-		if(curr_pcb->open_files[i].flags == AVAILABLE)
-		{
-			curr_pcb->open_files[i].flags = NOT_AVAILABLE;
-			return i;
-		}
-	}
-	return -1;
->>>>>>> 040bb055b46b218a317a1463b0a522b37eb18a0e
 }
 
 /*
@@ -461,12 +446,8 @@ int32_t write_file(int32_t fd, const void * buf, int32_t nbytes){
  *  RETURN VALUE: the index of the open directory in the file array (the
  *								file descriptor), return -1 if unable to open file
 */
-<<<<<<< HEAD
 int32_t open_directory(const uint8_t * dname)
 {
-=======
-int32_t open_directory(const uint8_t * dname){
->>>>>>> 040bb055b46b218a317a1463b0a522b37eb18a0e
     self_file_flag = 1;
     directoy_flag = 1;
     return 0;
@@ -494,13 +475,8 @@ int32_t close_directory(int32_t fd){
  *  OUTPUT: none
  *  RETURN VALUE: number from bytes copied to buf, -1 if unsuccessful
 */
-<<<<<<< HEAD
 int32_t read_directory(int32_t fd, void * buf, int32_t nbytes)
 {
-=======
-
-int32_t read_directory(int32_t fd, void * buf, int32_t nbytes){
->>>>>>> 040bb055b46b218a317a1463b0a522b37eb18a0e
 
     pcb_t * curr_pcb;
     uint32_t file_inode;
@@ -529,10 +505,7 @@ int32_t read_directory(int32_t fd, void * buf, int32_t nbytes){
 				directoy_flag = 0;
 		    return sizeof(dirEntries[i].filename);
 		}
-<<<<<<< HEAD
 
-=======
->>>>>>> 040bb055b46b218a317a1463b0a522b37eb18a0e
     }
     return -1;
 }
