@@ -32,7 +32,6 @@ jump_table_ops directory_table = {read_directory, write_directory, open_director
 jump_table_ops closed_table = {dummy_function, dummy_function, dummy_function, dummy_function};
 
 uint8_t available_processes[MAX_PROCESSES] = {AVAILABLE, AVAILABLE};
-
 uint32_t elf_eip;
 
 /* System_Call : HALT
@@ -75,7 +74,6 @@ int32_t SYS_HALT(uint8_t status)
         init_page(_128MB, (uint32_t)(_8MB ));
         SYS_EXECUTE("shell");
     }
-
     init_page(_128MB, (uint32_t)(_8MB + _4MB));
     asm volatile(
         "movl %0, %%ebp;"
