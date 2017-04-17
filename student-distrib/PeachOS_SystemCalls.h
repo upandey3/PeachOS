@@ -8,7 +8,7 @@
 #define MAX_OPEN_FILES 8
 #define MAX_FILENAME_SIZE 32
 
-#define MAX_PROCESSES 2
+#define MAX_PROCESSES 6
 
 #define LOWER_13_BITS_MASK 0xFFFFE000
 
@@ -86,6 +86,7 @@ typedef struct {
     int8_t parent_process_id;
     uint32_t parent_stack_pointer;
     uint32_t parent_base_pointer;
+    uint32_t parent_pcb;
     uint8_t state;
     uint8_t timeslice;
 } pcb_t;
