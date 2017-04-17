@@ -11,6 +11,11 @@
 
 extern uint32_t fs_ctrl_3;
 
+#define FILE_TYPE_SIZE 4
+#define MAX_BYTE_WIDTH 6 // Formatting. Determined by comparing printf output with terminal size
+
+extern uint32_t fs_ctrl_3;
+
 #define FILENAMESIZE 32
 #define DERESERVED 24
 #define BBRESERVED 52
