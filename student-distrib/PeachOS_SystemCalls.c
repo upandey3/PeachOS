@@ -155,6 +155,7 @@ int32_t SYS_EXECUTE(const uint8_t* command)
         k++;
         i++;
     }
+    printf("The argument is %s\n",arg_buffer);
     /*
      * Read the file, fill in the dir_entry
      * Use the inode to send to read_data function to get the first four bytes
@@ -321,18 +322,18 @@ int32_t SYS_EXECUTE(const uint8_t* command)
 */
 int32_t SYS_READ(int32_t fd, void* buf, int32_t nbytes)
 {
-    uint32_t vrft = fd;
+    //printf("SYS LINE %d", __LINE__);
 
+    uint32_t vrft = fd;
     pcb_t *curr_pcb = get_curr_pcb();
+
     if (vrft > LAST_FD || curr_pcb->open_files[vrft].flags == AVAILABLE)
-    {
         return -1;
+    else{
+        int a;
+        a = curr_pcb->open_files[vrft].file_jumptable.fd_read(vrft, buf, nbytes);
+        return a;
     }
-    else
-    {
-        return curr_pcb->open_files[vrft].file_jumptable.fd_read(vrft, buf, nbytes);
-    }
-    return 0;
 }
 /* System_Call : WRITE
  *
@@ -373,7 +374,6 @@ int32_t SYS_WRITE(int32_t fd, const void* buf, int32_t nbytes)
 */
 int32_t SYS_OPEN(const uint8_t* filename)
 {
-    //printf("filename is %s\n", filename);
     // using these two temp variables for getting filesize
     // uint8_t fname[MAX_FILENAME_SIZE] = {'\0'};
 
@@ -437,7 +437,7 @@ int32_t SYS_OPEN(const uint8_t* filename)
         default:
             break;
      }
-    printf("The inode for '.' is %d: In open, the fd for '.' is %d\n", curr_pcb->open_files[i].inode, i);
+    //printf("The inode for '.' is %d: In open, the fd for '.' is %d\n", curr_pcb->open_files[i].inode, i);
     return i;
 }
 /* System_Call : CLOSE

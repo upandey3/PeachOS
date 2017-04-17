@@ -18,7 +18,7 @@
 #define FIRST_FD 2
 #define LAST_FD 7
 
-#define OFFSET0 0x0
+#define OFFSET0 0
 
 #define FILE 2
 #define DIR 1

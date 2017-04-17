@@ -182,6 +182,7 @@ entry (unsigned long magic, unsigned long addr)
 	//call_sys_halt(2);
 
 	clear_screen();
+	//testCat();
 	uint8_t buffer[100] = "shell";
 	call_sys_execute(buffer);
 

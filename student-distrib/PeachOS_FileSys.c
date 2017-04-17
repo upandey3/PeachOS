@@ -356,6 +356,17 @@ int32_t print_file_by_index(uint32_t file_num)
 */
 int32_t open_file(const uint8_t * filename)
 {
+	pcb_t* curr_pcb = get_curr_pcb();
+	int i;
+
+	for(i=2; i<7; i++)
+	{
+		if(curr_pcb->open_files[i].flags == AVAILABLE)
+		{
+			curr_pcb->open_files[i].flags = NOT_AVAILABLE;
+			return i;
+		}
+	}
 	return -1;
 }
 
@@ -368,7 +379,7 @@ int32_t open_file(const uint8_t * filename)
  *  RETURN VALUE: return 0 if successful, -1 otherwise
 */
 int32_t close_file(int32_t fd){
-	return -1;
+	return 0;
 }
 /*
  * read_file
@@ -389,7 +400,7 @@ int32_t read_file(int32_t fd, void * buf, int32_t nbytes){
     uint32_t num_bytes, new_pos;
     pcb_t * curr_pcb;
 
-    if (!buf || fd < FIRST_FD || fd > LAST_FD || !nbytes)
+    if (!buf || fd < FIRST_FD || fd > LAST_FD)
         return -1;
 
     curr_pcb = get_curr_pcb();
@@ -403,9 +414,9 @@ int32_t read_file(int32_t fd, void * buf, int32_t nbytes){
     if (file_position >= file_length)
         return 0;
 
-    num_bytes = read_data(file_inode, file_position, buf, nbytes);
+    num_bytes = read_data(file_inode, file_position, (uint8_t *) buf, nbytes);
     new_pos = num_bytes + file_position;
-    curr_pcb->open_files[fd].file_position = new_pos >= file_length ? 0 : new_pos;
+    curr_pcb->open_files[fd].file_position = new_pos;
     return num_bytes;
 }
 
@@ -450,7 +461,7 @@ int32_t open_directory(const uint8_t * dname)
  *  RETURN VALUE: return 0 if successful, -1 otherwise
 */
 int32_t close_directory(int32_t fd){
-	return -1;
+	return 0;
 }
 
 /*
