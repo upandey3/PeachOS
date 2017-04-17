@@ -35,11 +35,11 @@ uint8_t available_processes[MAX_PROCESSES] = {AVAILABLE, AVAILABLE};
 uint32_t elf_eip;
 
 /* System_Call : HALT
- *
- * System_Call_Input: Status
- *
- * System_Call_Output:
- *
+ * DESCRIPTION:
+ *       This system call terminates a process, returning the specified
+ *	     value to its parent process
+ * System_Call_Input: Status:
+ * System_Call_Output: Returns 0
  * Source: MP3 Documentation, APPENDIX B
 */
 int32_t SYS_HALT(uint8_t status)
@@ -90,13 +90,13 @@ int32_t SYS_HALT(uint8_t status)
 }
 
 /* System_Call : EXECUTE
- *
- * System_Call_Input: Command, buffer that holds filename and arguments.
- *
- * System_Call_Output:
- *
+ * DESCRIPTION:
+ *       This system call attempts to load and execute a new,
+ *       handing off the processor to the new program until it terminates
+ * System_Call_Input: Command, buffer that holds filename and arguments
+ * System_Call_Output: Returns 0 on success, -1 on failure
  * Source: MP3 Documentation, APPENDIX B
-*/
+ */
 int32_t SYS_EXECUTE(const uint8_t* command)
 {
     // using these two temp variables for getting filesize
@@ -282,14 +282,14 @@ int32_t SYS_EXECUTE(const uint8_t* command)
 }
 
 /* System_Call : READ
- *
+ * DESCRIPTION:
+ *       This system call reads data from a keyboard, a file, device
+ *       (RTC), or directory.
  * System_Call_Input: fd, buf, nbytes
  *      fd- file Descriptor
  *      buf- buffer to read into it
  *      nbytes- how many bytes were "read" in
- *
- * System_Call_Output:
- *
+ * System_Call_Output: Returns the number of bytes read
  * Source: MP3 Documentation, APPENDIX B
 */
 int32_t SYS_READ(int32_t fd, void* buf, int32_t nbytes)
@@ -308,7 +308,8 @@ int32_t SYS_READ(int32_t fd, void* buf, int32_t nbytes)
     }
 }
 /* System_Call : WRITE
- *
+ * DESCRIPTION:
+ *      This system call writes data to the terminal or to a device (RTC)
  * System_Call_Input: fd, buf, nbytes
  *      fd- file descriptor
  *      buf- buffer to write from. Print to screen what's in the buffer
@@ -320,7 +321,6 @@ int32_t SYS_READ(int32_t fd, void* buf, int32_t nbytes)
 */
 int32_t SYS_WRITE(int32_t fd, const void* buf, int32_t nbytes)
 {
-// MAKE SURE WRITE FUNCTIONS ARE GOOD IN THE JUMP TABLES
     uint32_t vrft = fd;
 
     pcb_t *curr_pcb = get_curr_pcb();
@@ -336,28 +336,16 @@ int32_t SYS_WRITE(int32_t fd, const void* buf, int32_t nbytes)
 }
 
 /* System_Call : OPEN
- *
+ * DESCRIPTION:
+ *      This system call provides access to the file system, providing
+ *      an unused file descriptor for the file
  * System_Call_Input: filename
  *      filename- the name of the file to open
- *
  * System_Call_Output:
- *
  * Source: MP3 Documentation, APPENDIX B
 */
 int32_t SYS_OPEN(const uint8_t* filename)
 {
-    // using these two temp variables for getting filesize
-    // uint8_t fname[MAX_FILENAME_SIZE] = {'\0'};
-
-    // // iterating the passed argument array to get the size of "filename"
-    //
-    // while(i < MAX_FILENAME_SIZE && filename[i] != ' ')
-    // {
-    //     fname[i] = filename[i];
-    //     i++;
-    // }
-  //  printf("file name is %s\n", filename);
-
     uint32_t i = 0;
     dentry_t dir_entry;
     pcb_t *curr_pcb = get_curr_pcb();
@@ -418,12 +406,12 @@ int32_t SYS_OPEN(const uint8_t* filename)
     return i;
 }
 /* System_Call : CLOSE
- *
+ * DESCRIPTION:
+ *      This system call closes the specified file descriptor and
+ *      makes it available for return from later calls to open
  * System_Call_Input: fd
  *      fd- file descriptor to close within the PCB
- *
  * System_Call_Output:
- *
  * Source: MP3 Documentation, APPENDIX B
 */
 int32_t SYS_CLOSE(int32_t fd)
@@ -443,7 +431,9 @@ int32_t SYS_CLOSE(int32_t fd)
 }
 
 /* System_Call : GETARGS
- *
+ * DESCRIPTION:
+ *      This system call reads the program's command line arguments
+ *      into a user-level buffer.
  * System_Call_Input: buf, nbytes
  *      buf- buffer to parse and get the arguments
  *      nbytes- how many bytes to parse
@@ -612,4 +602,3 @@ int32_t get_available_process_num()
     }
     return -1;
 }
-

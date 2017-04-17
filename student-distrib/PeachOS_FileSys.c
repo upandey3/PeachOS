@@ -539,4 +539,3 @@ int32_t read_directory(int32_t fd, void * buf, int32_t nbytes)
 int32_t write_directory(int32_t fd, const void * buf, int32_t nbytes){
 	return -1;
 }
-
