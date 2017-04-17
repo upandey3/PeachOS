@@ -26,6 +26,6 @@ extern int32_t call_sys_getargs(uint8_t* buf, int32_t nbytes);
 extern int32_t call_sys_vidmap(uint8_t** screen_start);
 extern int32_t call_sys_set_handler(int32_t signum, void* handler_address);
 extern int32_t call_sys_sigreturn(void);
-extern void testCat();
+//extern void testCat();
 
 #endif

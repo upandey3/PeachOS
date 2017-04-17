@@ -46,6 +46,7 @@ int32_t SYS_HALT(uint8_t status)
 {
     int index = 0;
     int retval;
+    uint8_t buffer[100] = "shell";
 
     cli();
 
@@ -72,7 +73,7 @@ int32_t SYS_HALT(uint8_t status)
     {
         available_processes[(uint8_t)parent_pcb->process_id] = AVAILABLE;
         init_page(_128MB, (uint32_t)(_8MB ));
-        SYS_EXECUTE("shell");
+        SYS_EXECUTE(buffer);
     }
     init_page(_128MB, (uint32_t)(_8MB + _4MB));
     asm volatile(
@@ -355,6 +356,7 @@ int32_t SYS_OPEN(const uint8_t* filename)
     //     fname[i] = filename[i];
     //     i++;
     // }
+  //  printf("file name is %s\n", filename);
 
     uint32_t i = 0;
     dentry_t dir_entry;
@@ -363,9 +365,13 @@ int32_t SYS_OPEN(const uint8_t* filename)
 
     // find the dir_entry from the file system
     if (read_dentry_by_name(filename, &dir_entry) == -1)
+    {
+      //  printf("failed file name is %s\n", dir_entry.filename);
         return -1;
+    }
     else
     {
+          //  printf("successful file name is %s\n", dir_entry.filename);
         for (i = FIRST_FD; i <= LAST_FD; i++)
         {
             if (curr_pcb->open_files[i].flags == NOT_AVAILABLE)
@@ -606,3 +612,4 @@ int32_t get_available_process_num()
     }
     return -1;
 }
+
