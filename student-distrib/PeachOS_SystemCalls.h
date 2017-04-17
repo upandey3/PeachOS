@@ -80,10 +80,17 @@ typedef struct {
     file_descriptor_t open_files[MAX_OPEN_FILES];
     uint8_t filenames[MAX_OPEN_FILES][MAX_FILENAME_SIZE];
     int8_t process_id;
+<<<<<<< HEAD
     int8_t parent_process_id;
     uint8_t args[argsize];
     uint32_t stack_pointer;
     uint32_t base_pointer;
+=======
+    uint8_t args[argsize];
+    uint32_t stack_pointer;
+    uint32_t base_pointer;
+    int8_t parent_process_id;
+>>>>>>> 040bb055b46b218a317a1463b0a522b37eb18a0e
     uint32_t parent_stack_pointer;
     uint32_t parent_base_pointer;
     uint32_t parent_pcb;

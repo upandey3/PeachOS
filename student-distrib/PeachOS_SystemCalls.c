@@ -51,18 +51,29 @@ int32_t SYS_HALT(uint8_t status)
     cli();
 
     pcb_t * current_pcb = get_curr_pcb();
+<<<<<<< HEAD
     pcb_t * parent_pcb = (pcb_t*)current_pcb->parent_pcb;
+=======
+>>>>>>> 040bb055b46b218a317a1463b0a522b37eb18a0e
 
     available_processes[(uint8_t)current_pcb->process_id] = AVAILABLE;
 
     while (index < MAX_OPEN_FILES)
+<<<<<<< HEAD
         retval = SYS_CLOSE(index++);
+=======
+    {
+        retval = SYS_CLOSE(index);
+        index++;
+    }
+>>>>>>> 040bb055b46b218a317a1463b0a522b37eb18a0e
 
     /* If we are trying to halt the last process in the terminal,
       then execute shell again
       SOURCE: https://piazza.com/class/iwy7snh02335on?cid=911 */
 
     tss.ss0 = KERNEL_DS;
+<<<<<<< HEAD
 	tss.esp0 = parent_pcb->stack_pointer;
 
     // flush_tlb();
@@ -85,6 +96,23 @@ int32_t SYS_HALT(uint8_t status)
         :
         : "r"(parent_pcb->base_pointer), "r"(parent_pcb->stack_pointer), "r"((uint32_t) status)
         : "esp", "ebp"
+=======
+	tss.esp0 = current_pcb->parent_stack_pointer;
+
+    sti();
+    if (current_pcb->parent_process_id == current_pcb->process_id || current_pcb->parent_process_id == -1)
+    {
+        SYS_EXECUTE((uint8_t *)"shell");
+    }
+
+    asm volatile (
+        "movl %0, %%ebp;"
+        "movl %1, %%esp;"
+        "jmp ret_from_halt;"
+        :
+        : "r"(current_pcb->parent_base_pointer), "r"(current_pcb->parent_stack_pointer)
+        : "eax", "ebx"
+>>>>>>> 040bb055b46b218a317a1463b0a522b37eb18a0e
         );
 
     return 0;
@@ -100,6 +128,8 @@ int32_t SYS_HALT(uint8_t status)
 */
 int32_t SYS_EXECUTE(const uint8_t* command)
 {
+
+
     // using these two temp variables for getting filesize
     uint32_t size_file_name = 0;
     uint8_t file_name[32] = {'\0'};
@@ -135,12 +165,23 @@ int32_t SYS_EXECUTE(const uint8_t* command)
         k++;
         i++;
     }
+<<<<<<< HEAD
     //printf("The argument is %s\n",arg_buffer);
+=======
+    printf("The argument is %s\n",arg_buffer);
+>>>>>>> 040bb055b46b218a317a1463b0a522b37eb18a0e
     /*
      * Read the file, fill in the dir_entry
      * Use the inode to send to read_data function to get the first four bytes
      * We need to check if they are DEL E L F
      */
+<<<<<<< HEAD
+=======
+
+
+
+
+>>>>>>> 040bb055b46b218a317a1463b0a522b37eb18a0e
     if(read_dentry_by_name(file_name, &dir_entry) == -1) // find the dir_entry from the file system
     {
         return -1;
@@ -156,10 +197,17 @@ int32_t SYS_EXECUTE(const uint8_t* command)
         }
         /* Checking to see if it's executable, strcmp == 0 means they are same, another number means they are not */
 
+<<<<<<< HEAD
+=======
+
+
+
+>>>>>>> 040bb055b46b218a317a1463b0a522b37eb18a0e
         if(strncmp((const int8_t*)executable_temp_buf, (const int8_t*)executable_check, 4) != 0)
         {
             return -1;
         }
+<<<<<<< HEAD
     }
 
     uint32_t process_num = get_available_process_num(); // get the available process
@@ -173,6 +221,17 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     pcb_t * pcb_new = pcb_init(process_num);
     pcb_new->base_pointer = (uint32_t)(pcb_new + _8KB - 4);
     pcb_new->stack_pointer = (uint32_t)(pcb_new + _8KB - 4);
+=======
+    }
+
+    uint32_t process_num = get_available_process_num(); // get the available process
+    if(process_num == -1)
+    return -1; // CANT DO ANYTHING, MAX PROCESS REACHED
+    uint32_t pcb_esp; // get esp into it
+    uint32_t pcb_ebp;
+
+    pcb_t* pcb_new = pcb_init(process_num);
+>>>>>>> 040bb055b46b218a317a1463b0a522b37eb18a0e
 
     read_data(dir_entry.inode, ELF_EIP_START, executable_temp_buf, READ_SIZE); // 24-27 DOES MATTER, EIP
 
@@ -180,11 +239,18 @@ int32_t SYS_EXECUTE(const uint8_t* command)
 
     init_page((uint32_t)elf_eip, (uint32_t)(_8MB + (pcb_new->process_id * _4MB)));
 
+<<<<<<< HEAD
     //   printf("PDE: %d\n", page_directory[elf_eip >> PDBITSH].accessed);
 
     uint32_t file_offset = 0;
 
     uint8_t * shell_base = (uint8_t*)0x08048000;                              // Loading program starting 128 MB virtual address
+=======
+ //   printf("PDE: %d\n", page_directory[elf_eip >> PDBITSH].accessed);
+
+    uint32_t file_offset = 0;
+    uint8_t* shell_base = (uint8_t*)0x08048000;
+>>>>>>> 040bb055b46b218a317a1463b0a522b37eb18a0e
 
     uint32_t file_length_size = inodes[dir_entry.inode].filelength;
     uint32_t file_length;
@@ -200,6 +266,7 @@ int32_t SYS_EXECUTE(const uint8_t* command)
 
     page_directory[elf_eip >> PDBITSH].accessed = 0;
 
+<<<<<<< HEAD
     // // ESP -> EAX, EBP -> EBX
     // asm volatile(
     //     "movl %%esp, %0;"
@@ -211,6 +278,20 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     //
     // pcb_new->parent_stack_pointer = pcb_esp;
     // pcb_new->parent_base_pointer = pcb_ebp;
+=======
+
+    // ESP -> EAX, EBP -> EBX
+    asm volatile(
+        "movl %%esp, %%eax;"
+        "movl %%ebp, %%ebx;"
+        : "=a" (pcb_esp), "=b"(pcb_ebp)
+        :
+        : "ebp", "esp"
+        );
+
+    pcb_new->parent_stack_pointer = pcb_esp;
+    pcb_new->parent_base_pointer = pcb_ebp;
+>>>>>>> 040bb055b46b218a317a1463b0a522b37eb18a0e
 
     strcpy((int8_t*)pcb_new->args, (int8_t*)arg_buffer);
 
@@ -272,13 +353,22 @@ int32_t SYS_EXECUTE(const uint8_t* command)
         movl %0, %%eax              \n\
         pushl %%eax                 \n\
         iret                        \n\
+<<<<<<< HEAD
                                     \n\
+=======
+>>>>>>> 040bb055b46b218a317a1463b0a522b37eb18a0e
         ret_from_halt:              \n\
         "
         :
         : "r" (elf_eip), "r" (((elf_eip & 0xFFC00000) + (_4MB)) - 4)
+<<<<<<< HEAD
         : "eax", "edx"
     );
+=======
+        : "eax"
+    );
+
+>>>>>>> 040bb055b46b218a317a1463b0a522b37eb18a0e
     return 0;
 }
 
@@ -566,8 +656,13 @@ pcb_t * get_curr_pcb_process(uint8_t process_num)
 
 pcb_t * pcb_init(uint32_t process_num)
 {
+<<<<<<< HEAD
     pcb_t * parent_pcb = get_curr_pcb();
     pcb_t * curr_pcb = get_curr_pcb_process((uint8_t)process_num);
+=======
+    pcb_t *parent_pcb = get_curr_pcb();
+    pcb_t *curr_pcb = get_curr_pcb_process((uint8_t)process_num);
+>>>>>>> 040bb055b46b218a317a1463b0a522b37eb18a0e
 
     curr_pcb->open_files[0].file_jumptable = stdin_table;
     curr_pcb->open_files[1].file_jumptable = stdout_table;
