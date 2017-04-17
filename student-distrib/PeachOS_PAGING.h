@@ -61,4 +61,7 @@ void enablePaging (void);
 /* Initializes a new page directory index for a new process */
 void init_page (uint32_t va, uint32_t pa);
 
+/* This function uses assembly linkage to flush the tlb */
+void flush_tlb();
+
 #endif /* _PAGING_H */
