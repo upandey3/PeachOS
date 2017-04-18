@@ -31,7 +31,12 @@ jump_table_ops directory_table = {read_directory, write_directory, open_director
 /* closed file, file operation table */
 jump_table_ops closed_table = {dummy_function, dummy_function, dummy_function, dummy_function};
 
+<<<<<<< HEAD
 uint8_t available_processes[MAX_PROCESSES] = {AVAILABLE, AVAILABLE};
+=======
+uint8_t available_processes[MAX_PROCESSES] = {AVAILABLE, AVAILABLE, AVAILABLE, AVAILABLE, AVAILABLE, AVAILABLE};
+
+>>>>>>> 64250c870ef62f9c32f779aed8ee787a39051388
 uint32_t elf_eip;
 
 /* System_Call : HALT
@@ -54,11 +59,14 @@ int32_t SYS_HALT(uint8_t status)
 
     pcb_t * current_pcb = get_curr_pcb();
     pcb_t * parent_pcb = (pcb_t*)current_pcb->parent_pcb;
+<<<<<<< HEAD
 
     printf("Parent Process ID: %d\n", parent_pcb->process_id);
     printf("Current Process ID: %d\n", current_pcb->process_id);
 
     sti();
+=======
+>>>>>>> 64250c870ef62f9c32f779aed8ee787a39051388
 
     available_processes[(uint8_t)current_pcb->process_id] = AVAILABLE;
 
@@ -68,13 +76,20 @@ int32_t SYS_HALT(uint8_t status)
         // available_processes[(uint8_t)parent_pcb->process_id] = AVAILABLE;
         SYS_EXECUTE(buffer);
     }
+<<<<<<< HEAD
     // flush_tlb();
+=======
+
+    init_page(_128MB, (uint32_t)(_8MB + parent_pcb->process_id * _4MB));
+
+>>>>>>> 64250c870ef62f9c32f779aed8ee787a39051388
     /* If we are trying to halt the last process in the terminal,
       then execute shell again
       SOURCE: https://piazza.com/class/iwy7snh02335on?cid=911 */
 
 	  tss.esp0 = current_pcb->parent_tss;
     tss.ss0 = KERNEL_DS;
+<<<<<<< HEAD
 
     init_set_page(_128MB, _8MB);
 
@@ -86,6 +101,35 @@ int32_t SYS_HALT(uint8_t status)
         : "r"(current_pcb->parent_tss), "r"(current_pcb->parent_tss)
         : "esp", "ebp"
         );
+=======
+	tss.esp0 = (uint32_t)((_8MB - (parent_pcb->process_id * _8KB)) - 4);
+
+    sti();
+
+    if (current_pcb->parent_process_id == current_pcb->process_id || current_pcb->parent_process_id == -1 || current_pcb->parent_process_id == 0)
+    {
+      printf("if reached \n");
+
+      printf("reached after call to init_page! \n");
+
+      SYS_EXECUTE("shell");
+    }
+
+    else
+    {
+      printf("else reached \n");
+
+      asm volatile(
+                 "movl %0, %%ebp;"
+                 "movl %1, %%esp;"
+                 "movl %2, %%eax;"
+                 "jmp ret_from_halt;"
+                 :
+                 : "r"(parent_pcb->base_pointer), "r"(parent_pcb->stack_pointer), "r"((uint32_t) status)
+                 : "esp", "ebp"
+                 );
+    }
+>>>>>>> 64250c870ef62f9c32f779aed8ee787a39051388
 
     return 0;
 }
@@ -202,7 +246,7 @@ int32_t SYS_EXECUTE(const uint8_t* command)
 
    // printf("PDE Check: %d\n", page_directory[elf_eip >> PDBITSH].present);
 
-    // page_directory[elf_eip >> PDBITSH].accessed = 0;
+    //page_directory[elf_eip >> PDBITSH].accessed = 0;
 
     // // ESP -> EAX, EBP -> EBX
     // asm volatile(
@@ -277,7 +321,8 @@ int32_t SYS_EXECUTE(const uint8_t* command)
         movl %0, %%eax              \n\
         pushl %%eax                 \n\
         iret                        \n\
-        ret_from_halt:                  \n\
+                                    \n\
+        ret_from_halt:              \n\
         "
         :
         : "r" (elf_eip), "r" (((elf_eip & 0xFFC00000) + (_4MB)) - 4)
