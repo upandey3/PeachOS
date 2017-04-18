@@ -11,6 +11,18 @@
 
 #define PDBITSH 22
 #define PTBITSH 12
+#define PDBITS 10
+#define PTBITS 12
+
+#define VIDEO 0xB8000
+#define KERNEL_BASE_ADDR 	0x400000
+#define PAGE_DIR_BITS		10
+#define PAGE_TABLE_BITS		12
+#define PAGE_BITS		(PAGE_DIR_BITS + PAGE_TABLE_BITS)
+
+#define PAGE_DIRECTORY_SIZE 1024
+#define PAGE_TABLE_SIZE 1024
+#define ALIGNED_MEMORY 4096
 
 //struct for page directory entries
 typedef struct page_directory {
@@ -60,6 +72,9 @@ void enablePaging (void);
 
 /* Initializes a new page directory index for a new process */
 void init_page (uint32_t va, uint32_t pa);
+
+/* Initializes a new page directory index for a new process */
+void init_set_page (uint32_t va, uint32_t pa);
 
 /* This function uses assembly linkage to flush the tlb */
 void flush_tlb();

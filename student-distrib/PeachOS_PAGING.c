@@ -47,17 +47,14 @@ void pageDirectory_init()
 	{
 		page_table[i].PBA = ((i*FOUR_K)>>12); // init first page table (0-4MB)
 	}
-
 	page_directory[0].PTBA = (((uint32_t)page_table)>>12); //init first page directory entry (0-4MB)
 	page_directory[0].read_write = 1;
 	page_directory[0].present = 1;
-
 	page_directory[1].PTBA = FOUR_K/4;		//address of kernel 4MB page (4-8MB)
 	page_directory[1].page_size = 1; 		//4MB page, not 4KB
 	page_directory[1].user_supervisor = 0;	//supervisor mode set
 	page_directory[1].read_write = 1;		//read / write enabled
 	page_directory[1].present = 1;			//kernel (4-8MB) present
-
 	page_table[VIDEO>>12].read_write = 1;	//video memory needs to be accessible
 	page_table[VIDEO>>12].present = 1;
 }
@@ -113,10 +110,10 @@ void enablePaging()
 
 void init_page (uint32_t va, uint32_t pa)
 {
-	uint32_t PD_index = (va & PD_MASK) >> PDBITSH;
-	uint32_t Page_addr = (pa & OFFSET) >> PTBITSH;
+	uint32_t PD_index = (va) >> PDBITSH;
+	//uint32_t Page_addr = ((pa) >> PDBITSH) << PDBITS;
 
-	page_directory[PD_index].PTBA = Page_addr;
+	page_directory[PD_index].PTBA =((pa) >> PDBITSH) << PDBITS;
 	page_directory[PD_index].available = 0;
 	page_directory[PD_index].reserved = 0;
 	page_directory[PD_index].accessed = 0;
@@ -124,11 +121,20 @@ void init_page (uint32_t va, uint32_t pa)
 	page_directory[PD_index].write_through = 0;
 	page_directory[PD_index].user_supervisor = 1;
 	page_directory[PD_index].page_size = 1;
-	page_directory[PD_index].global_page = 1;
+	page_directory[PD_index].global_page = 0;
 	page_directory[PD_index].read_write = 1;
 	page_directory[PD_index].present = 1;
 
-	//flush_tlb();
+	flush_tlb();
+}
+
+void init_set_page (uint32_t va, uint32_t pa)
+{
+	uint32_t PD_index = (va) >> PDBITSH;
+	uint32_t Page_addr = ((pa) >> PDBITSH) << PDBITS;
+	page_directory[PD_index].PTBA = ((pa) >> PDBITSH) << PDBITS;
+
+	flush_tlb();
 }
 
 /*****************************************************************
@@ -146,10 +152,10 @@ void init_page (uint32_t va, uint32_t pa)
 void flush_tlb()
 {
 	asm volatile (
-		"movl %%cr3, %%eax;"
+		"movl %0, %%eax;"
 		"movl %%eax, %%cr3;"
 		:
-		:
+		: "r"(page_directory)
 		: "eax"			// clobbered registers
 		);
 }

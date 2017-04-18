@@ -10,6 +10,7 @@
 #define NULL 0
 
 #define _128MB 0x8000000
+#define _12MB 0xC00000
 #define _8MB 0x800000
 #define _4MB 0x400000
 #define _8KB 0x2000

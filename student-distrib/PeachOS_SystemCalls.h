@@ -86,6 +86,7 @@ typedef struct {
     uint32_t base_pointer;
     uint32_t parent_stack_pointer;
     uint32_t parent_base_pointer;
+    uint32_t parent_tss;
     uint32_t parent_pcb;
     uint8_t state;
     uint8_t timeslice;
@@ -113,4 +114,3 @@ pcb_t *pcb_init();
 pcb_t * get_curr_pcb_process(uint8_t process_num);
 
 #endif
-
