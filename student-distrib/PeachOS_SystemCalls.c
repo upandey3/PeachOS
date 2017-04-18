@@ -44,45 +44,46 @@ uint32_t elf_eip;
 */
 int32_t SYS_HALT(uint8_t status)
 {
+    cli();
     int index = 0;
     int retval;
     uint8_t buffer[100] = "shell";
 
-    cli();
+    while (index < MAX_OPEN_FILES)
+        retval = SYS_CLOSE(index++);
 
     pcb_t * current_pcb = get_curr_pcb();
     pcb_t * parent_pcb = (pcb_t*)current_pcb->parent_pcb;
 
+    printf("Parent Process ID: %d\n", parent_pcb->process_id);
+    printf("Current Process ID: %d\n", current_pcb->process_id);
+
+    sti();
+
     available_processes[(uint8_t)current_pcb->process_id] = AVAILABLE;
 
-    while (index < MAX_OPEN_FILES)
-        retval = SYS_CLOSE(index++);
-
+    if (current_pcb->process_id == parent_pcb->process_id || current_pcb->process_id == 0)
+    {
+        printf("HERE\n");
+        // available_processes[(uint8_t)parent_pcb->process_id] = AVAILABLE;
+        SYS_EXECUTE(buffer);
+    }
+    // flush_tlb();
     /* If we are trying to halt the last process in the terminal,
       then execute shell again
       SOURCE: https://piazza.com/class/iwy7snh02335on?cid=911 */
 
+	  tss.esp0 = current_pcb->parent_tss;
     tss.ss0 = KERNEL_DS;
-	tss.esp0 = parent_pcb->stack_pointer;
 
-    // flush_tlb();
+    init_set_page(_128MB, _8MB);
 
-    sti();
-
-    if (parent_pcb->process_id == current_pcb->process_id || current_pcb->parent_process_id == -1 || current_pcb->parent_process_id == 0)
-    {
-        available_processes[(uint8_t)parent_pcb->process_id] = AVAILABLE;
-        init_page(_128MB, (uint32_t)(_8MB ));
-        SYS_EXECUTE(buffer);
-    }
-    init_page(_128MB, (uint32_t)(_8MB + _4MB));
     asm volatile(
         "movl %0, %%ebp;"
         "movl %1, %%esp;"
-        "movl %2, %%eax;"
         "jmp ret_from_halt;"
         :
-        : "r"(parent_pcb->base_pointer), "r"(parent_pcb->stack_pointer), "r"((uint32_t) status)
+        : "r"(current_pcb->parent_tss), "r"(current_pcb->parent_tss)
         : "esp", "ebp"
         );
 
@@ -173,11 +174,15 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     pcb_new->base_pointer = (uint32_t)(pcb_new + _8KB - 4);
     pcb_new->stack_pointer = (uint32_t)(pcb_new + _8KB - 4);
 
-    read_data(dir_entry.inode, ELF_EIP_START, executable_temp_buf, READ_SIZE); // 24-27 DOES MATTER, EIP
+    read_data(dir_entry.inode, ELF_EIP_START, (uint8_t*)(&elf_eip), READ_SIZE); // 24-27 DOES MATTER, EIP
 
-    elf_eip = *((uint32_t*) executable_temp_buf);
+    // elf_eip = *((uint32_t*) executable_temp_buf);
 
-    init_page((uint32_t)elf_eip, (uint32_t)(_8MB + (pcb_new->process_id * _4MB)));
+    if(pcb_new->process_id == 0) //shell
+        init_page(_128MB, _8MB);
+    else
+        init_page(_128MB, _12MB); // other process
+
 
     //   printf("PDE: %d\n", page_directory[elf_eip >> PDBITSH].accessed);
 
@@ -197,7 +202,7 @@ int32_t SYS_EXECUTE(const uint8_t* command)
 
    // printf("PDE Check: %d\n", page_directory[elf_eip >> PDBITSH].present);
 
-    page_directory[elf_eip >> PDBITSH].accessed = 0;
+    // page_directory[elf_eip >> PDBITSH].accessed = 0;
 
     // // ESP -> EAX, EBP -> EBX
     // asm volatile(
@@ -213,8 +218,10 @@ int32_t SYS_EXECUTE(const uint8_t* command)
 
     strcpy((int8_t*)pcb_new->args, (int8_t*)arg_buffer);
 
+    pcb_new->parent_tss = tss.esp0;
+    tss.esp0 = (_8MB - (_8KB * (pcb_new->process_id + 1))) - 4;
+    printf("TSS.ESP0 : %x\n", tss.esp0);
     tss.ss0 = KERNEL_DS; // always  the same
-    tss.esp0 = (_8MB - _8KB * (pcb_new->process_id + 1)) - 4;
 
 
     /* What I Did
@@ -258,7 +265,6 @@ int32_t SYS_EXECUTE(const uint8_t* command)
 
     asm volatile ("                 \n\
         cli                         \n\
-                                    \n\
         pushl $0x2B                 \n\
         movl %1, %%eax              \n\
         pushl %%eax                 \n\
@@ -271,12 +277,11 @@ int32_t SYS_EXECUTE(const uint8_t* command)
         movl %0, %%eax              \n\
         pushl %%eax                 \n\
         iret                        \n\
-                                    \n\
-        ret_from_halt:              \n\
+        ret_from_halt:                  \n\
         "
         :
         : "r" (elf_eip), "r" (((elf_eip & 0xFFC00000) + (_4MB)) - 4)
-        : "eax", "edx"
+        : "eax"
     );
     return 0;
 }
@@ -578,11 +583,15 @@ pcb_t * pcb_init(uint32_t process_num)
     curr_pcb->process_id = process_num;
 
     curr_pcb->parent_pcb = (uint32_t)parent_pcb;
-    curr_pcb->base_pointer = 0;
-    curr_pcb->stack_pointer = 0;
+    curr_pcb->base_pointer = (uint32_t)(curr_pcb + _8KB - 4);;
+    curr_pcb->stack_pointer = (uint32_t)(curr_pcb + _8KB - 4);;
 
     if(parent_pcb == (pcb_t *)(_8MB - _8KB))
+    {
         curr_pcb->parent_process_id = -1;
+        parent_pcb->process_id = -1;
+        // parent_pcb->parent_process_id = 0;
+    }
     else
         curr_pcb->parent_process_id = parent_pcb->process_id;
 
