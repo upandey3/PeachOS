@@ -32,92 +32,71 @@ jump_table_ops directory_table = {read_directory, write_directory, open_director
 jump_table_ops closed_table = {dummy_function, dummy_function, dummy_function, dummy_function};
 
 uint8_t available_processes[MAX_PROCESSES] = {AVAILABLE, AVAILABLE};
-
 uint32_t elf_eip;
 
 /* System_Call : HALT
- *
- * System_Call_Input: Status
- *
- * System_Call_Output:
- *
+ * DESCRIPTION:
+ *       This system call terminates a process, returning the specified
+ *	     value to its parent process
+ * System_Call_Input: Status:
+ * System_Call_Output: Returns 0
  * Source: MP3 Documentation, APPENDIX B
 */
 int32_t SYS_HALT(uint8_t status)
 {
-    printf("Status is: %d \n", status);
-
     int index = 0;
     int retval;
+    uint8_t buffer[100] = "shell";
 
     cli();
 
     pcb_t * current_pcb = get_curr_pcb();
+    pcb_t * parent_pcb = (pcb_t*)current_pcb->parent_pcb;
 
     available_processes[(uint8_t)current_pcb->process_id] = AVAILABLE;
 
     while (index < MAX_OPEN_FILES)
-    {
-        retval = SYS_CLOSE(index);
-        index++;
-    }
+        retval = SYS_CLOSE(index++);
 
     /* If we are trying to halt the last process in the terminal,
       then execute shell again
       SOURCE: https://piazza.com/class/iwy7snh02335on?cid=911 */
 
     tss.ss0 = KERNEL_DS;
-	  tss.esp0 = (uint32_t)((_8MB - (current_pcb->parent_process_id * _8KB)) - 4);
+	tss.esp0 = parent_pcb->stack_pointer;
+
+    // flush_tlb();
 
     sti();
 
-    if (current_pcb->parent_process_id == current_pcb->process_id || current_pcb->parent_process_id == -1 || current_pcb->parent_process_id == 0)
+    if (parent_pcb->process_id == current_pcb->process_id || current_pcb->parent_process_id == -1 || current_pcb->parent_process_id == 0)
     {
-      printf("if reached \n");
-
-      init_page(_128MB, (uint32_t)(_8MB));
-
-      printf("reached after call to init_page! \n");
-
-      asm volatile(
-                 "movl %0, %%eax;"
-                 "movl %1, %%ebx;"
-                 "movl %2, %%ecx;"
-                 "jmp ret_from_halt;"
-                 :
-                 : "r"(current_pcb->parent_base_pointer), "r"(current_pcb->parent_stack_pointer), "r"((uint32_t) elf_eip)
-                 : "esp", "ebp"
-                 );
+        available_processes[(uint8_t)parent_pcb->process_id] = AVAILABLE;
+        init_page(_128MB, (uint32_t)(_8MB ));
+        SYS_EXECUTE(buffer);
     }
-
-    else
-    {
-      printf("else reached \n");
-
-      init_page(_128MB, (uint32_t)(_8MB + _4MB));
-
-      asm volatile(
-                 "movl %0, %%eax;"
-                 "movl %1, %%ebx;"
-                 "movl %2, %%ecx;"
-                 "jmp ret_from_halt;"
-                 :
-                 : "r"(current_pcb->parent_base_pointer), "r"(current_pcb->parent_stack_pointer), "r"((uint32_t) status)
-                 : "esp", "ebp"
-                 );
-    }
+    init_page(_128MB, (uint32_t)(_8MB + _4MB));
+    asm volatile(
+        "movl %0, %%ebp;"
+        "movl %1, %%esp;"
+        "movl %2, %%eax;"
+        "jmp ret_from_halt;"
+        :
+        : "r"(parent_pcb->base_pointer), "r"(parent_pcb->stack_pointer), "r"((uint32_t) status)
+        : "esp", "ebp"
+        );
 
     return 0;
 }
 
 /* System_Call : EXECUTE
- *
- * System_Call_Input: Command, buffer that holds filename and arguments.
- *
- * System_Call_Output:
- *
+ * DESCRIPTION:
+ *       This system call attempts to load and execute a new,
+ *       handing off the processor to the new program until it terminates
+ * System_Call_Input: Command, buffer that holds filename and arguments
+ * System_Call_Output: Returns 0 on success, -1 on failure
  * Source: MP3 Documentation, APPENDIX B
-*/
+ */
 int32_t SYS_EXECUTE(const uint8_t* command)
 {
     // using these two temp variables for getting filesize
@@ -155,7 +134,7 @@ int32_t SYS_EXECUTE(const uint8_t* command)
         k++;
         i++;
     }
-    printf("The argument is %s\n",arg_buffer);
+    //printf("The argument is %s\n",arg_buffer);
     /*
      * Read the file, fill in the dir_entry
      * Use the inode to send to read_data function to get the first four bytes
@@ -190,10 +169,9 @@ int32_t SYS_EXECUTE(const uint8_t* command)
       return -1; // CANT DO ANYTHING, MAX PROCESS REACHED
     }
 
-    uint32_t pcb_esp; // get esp into it
-    uint32_t pcb_ebp;
-
     pcb_t * pcb_new = pcb_init(process_num);
+    pcb_new->base_pointer = (uint32_t)(pcb_new + _8KB - 4);
+    pcb_new->stack_pointer = (uint32_t)(pcb_new + _8KB - 4);
 
     read_data(dir_entry.inode, ELF_EIP_START, executable_temp_buf, READ_SIZE); // 24-27 DOES MATTER, EIP
 
@@ -221,17 +199,17 @@ int32_t SYS_EXECUTE(const uint8_t* command)
 
     page_directory[elf_eip >> PDBITSH].accessed = 0;
 
-    // ESP -> EAX, EBP -> EBX
-    asm volatile(
-        "movl %%esp, %%eax;"
-        "movl %%ebp, %%ebx;"
-        : "=a" (pcb_esp), "=b"(pcb_ebp)
-        :
-        : "ebp", "esp"
-        );
-
-    pcb_new->parent_stack_pointer = pcb_esp;
-    pcb_new->parent_base_pointer = pcb_ebp;
+    // // ESP -> EAX, EBP -> EBX
+    // asm volatile(
+    //     "movl %%esp, %0;"
+    //     "movl %%ebp, %1;"
+    //     : "=r" (pcb_esp), "=r"(pcb_ebp)
+    //     :
+    //     : "ebp", "esp"
+    //     );
+    //
+    // pcb_new->parent_stack_pointer = pcb_esp;
+    // pcb_new->parent_base_pointer = pcb_ebp;
 
     strcpy((int8_t*)pcb_new->args, (int8_t*)arg_buffer);
 
@@ -295,29 +273,23 @@ int32_t SYS_EXECUTE(const uint8_t* command)
         iret                        \n\
                                     \n\
         ret_from_halt:              \n\
-                                    \n\
-        pushl %%ecx                 \n\
-        pushl %%eax                 \n\
-        leave                       \n\
-        ret                         \n\
         "
         :
         : "r" (elf_eip), "r" (((elf_eip & 0xFFC00000) + (_4MB)) - 4)
         : "eax", "edx"
     );
-
     return 0;
 }
 
 /* System_Call : READ
- *
+ * DESCRIPTION:
+ *       This system call reads data from a keyboard, a file, device
+ *       (RTC), or directory.
  * System_Call_Input: fd, buf, nbytes
  *      fd- file Descriptor
  *      buf- buffer to read into it
  *      nbytes- how many bytes were "read" in
- *
- * System_Call_Output:
- *
+ * System_Call_Output: Returns the number of bytes read
  * Source: MP3 Documentation, APPENDIX B
 */
 int32_t SYS_READ(int32_t fd, void* buf, int32_t nbytes)
@@ -336,7 +308,8 @@ int32_t SYS_READ(int32_t fd, void* buf, int32_t nbytes)
     }
 }
 /* System_Call : WRITE
- *
+ * DESCRIPTION:
+ *      This system call writes data to the terminal or to a device (RTC)
  * System_Call_Input: fd, buf, nbytes
  *      fd- file descriptor
  *      buf- buffer to write from. Print to screen what's in the buffer
@@ -348,7 +321,6 @@ int32_t SYS_READ(int32_t fd, void* buf, int32_t nbytes)
 */
 int32_t SYS_WRITE(int32_t fd, const void* buf, int32_t nbytes)
 {
-// MAKE SURE WRITE FUNCTIONS ARE GOOD IN THE JUMP TABLES
     uint32_t vrft = fd;
 
     pcb_t *curr_pcb = get_curr_pcb();
@@ -364,27 +336,16 @@ int32_t SYS_WRITE(int32_t fd, const void* buf, int32_t nbytes)
 }
 
 /* System_Call : OPEN
- *
+ * DESCRIPTION:
+ *      This system call provides access to the file system, providing
+ *      an unused file descriptor for the file
  * System_Call_Input: filename
  *      filename- the name of the file to open
- *
  * System_Call_Output:
- *
  * Source: MP3 Documentation, APPENDIX B
 */
 int32_t SYS_OPEN(const uint8_t* filename)
 {
-    // using these two temp variables for getting filesize
-    // uint8_t fname[MAX_FILENAME_SIZE] = {'\0'};
-
-    // // iterating the passed argument array to get the size of "filename"
-    //
-    // while(i < MAX_FILENAME_SIZE && filename[i] != ' ')
-    // {
-    //     fname[i] = filename[i];
-    //     i++;
-    // }
-
     uint32_t i = 0;
     dentry_t dir_entry;
     pcb_t *curr_pcb = get_curr_pcb();
@@ -392,9 +353,13 @@ int32_t SYS_OPEN(const uint8_t* filename)
 
     // find the dir_entry from the file system
     if (read_dentry_by_name(filename, &dir_entry) == -1)
+    {
+      //  printf("failed file name is %s\n", dir_entry.filename);
         return -1;
+    }
     else
     {
+          //  printf("successful file name is %s\n", dir_entry.filename);
         for (i = FIRST_FD; i <= LAST_FD; i++)
         {
             if (curr_pcb->open_files[i].flags == NOT_AVAILABLE)
@@ -441,12 +406,12 @@ int32_t SYS_OPEN(const uint8_t* filename)
     return i;
 }
 /* System_Call : CLOSE
- *
+ * DESCRIPTION:
+ *      This system call closes the specified file descriptor and
+ *      makes it available for return from later calls to open
  * System_Call_Input: fd
  *      fd- file descriptor to close within the PCB
- *
  * System_Call_Output:
- *
  * Source: MP3 Documentation, APPENDIX B
 */
 int32_t SYS_CLOSE(int32_t fd)
@@ -466,7 +431,9 @@ int32_t SYS_CLOSE(int32_t fd)
 }
 
 /* System_Call : GETARGS
- *
+ * DESCRIPTION:
+ *      This system call reads the program's command line arguments
+ *      into a user-level buffer.
  * System_Call_Input: buf, nbytes
  *      buf- buffer to parse and get the arguments
  *      nbytes- how many bytes to parse
@@ -610,9 +577,9 @@ pcb_t * pcb_init(uint32_t process_num)
 
     curr_pcb->process_id = process_num;
 
-    curr_pcb->parent_base_pointer = parent_pcb->base_pointer;
-    curr_pcb->base_pointer = (uint32_t)(curr_pcb) + _8KB - 4;
-    curr_pcb->stack_pointer = curr_pcb->base_pointer;
+    curr_pcb->parent_pcb = (uint32_t)parent_pcb;
+    curr_pcb->base_pointer = 0;
+    curr_pcb->stack_pointer = 0;
 
     if(parent_pcb == (pcb_t *)(_8MB - _8KB))
         curr_pcb->parent_process_id = -1;
@@ -622,7 +589,7 @@ pcb_t * pcb_init(uint32_t process_num)
   return curr_pcb;
 }
 
-uint32_t get_available_process_num()
+int32_t get_available_process_num()
 {
     uint32_t j = 0;
     for(j = 0; j < MAX_PROCESSES; j++)

@@ -300,7 +300,7 @@ void keyboard_key_pressed(uint8_t keyboard_value)
                 // if(keyboard_index > LIMIT)
                 //     buffer_limit_flag = 1;
                 // keyboard_index++;
-                if(keyboard_index > LIMIT)
+                if(keyboard_index > LIMIT-1)
                     buffer_limit_flag = 1;
                 if(buffer_limit_flag)
                     return;
@@ -327,7 +327,7 @@ void keyboard_key_pressed(uint8_t keyboard_value)
         {
             if(terminal_flag_keyboard)
             {
-                if(keyboard_index > LIMIT)
+                if(keyboard_index > LIMIT-1)
                     buffer_limit_flag = 1;
                 if(buffer_limit_flag)
                     return;
@@ -354,7 +354,7 @@ void keyboard_key_pressed(uint8_t keyboard_value)
         {
             if(terminal_flag_keyboard)
             {
-                if(keyboard_index > LIMIT)
+                if(keyboard_index > LIMIT-1)
                     buffer_limit_flag = 1;
                 if(buffer_limit_flag)
                     return;
@@ -380,7 +380,7 @@ void keyboard_key_pressed(uint8_t keyboard_value)
         {
             if(terminal_flag_keyboard)
             {
-                if(keyboard_index > LIMIT)
+                if(keyboard_index > LIMIT-1)
                     buffer_limit_flag = 1;
                 if(buffer_limit_flag)
                     return;

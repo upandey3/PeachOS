@@ -53,7 +53,7 @@ void terminal_init()
 int32_t terminal_open(const uint8_t* filename)
 {
   /* Success */
-  printf("Opening Terminal");
+  // printf("Opening Terminal");
   return 0;
 }
 
@@ -72,7 +72,7 @@ int32_t terminal_open(const uint8_t* filename)
 int32_t terminal_close(int32_t fd)
 {
   /* Success */
-  printf("Closing Terminal");
+  // printf("Closing Terminal");
   return 0;
 }
 
@@ -141,7 +141,7 @@ int32_t terminal_write(int32_t fd, const void* buf, int32_t nbytes)
         uint8_t buf_char = *((uint8_t*)buf + temp);
         if(buf_char == '\0')
         {
-            putc(buf_char);
+            putc('\n');
             break;
         }
         putc(buf_char);

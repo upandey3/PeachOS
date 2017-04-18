@@ -146,10 +146,10 @@ void init_page (uint32_t va, uint32_t pa)
 void flush_tlb()
 {
 	asm volatile (
-                 "movl %%cr3, %%eax;"
-								 "movl %%eax, %%cr3;"
-                	:
-									:
-									: "eax"																				// clobbered registers
-                 );
+		"movl %%cr3, %%eax;"
+		"movl %%eax, %%cr3;"
+		:
+		:
+		: "eax"			// clobbered registers
+		);
 }

@@ -42,17 +42,26 @@ int32_t read_dentry_by_name (const uint8_t* fname, dentry_t* dentry)
 {
     int i;
     int len = strlen((int8_t*)(fname));
-    if (len > FILENAMESIZE)
+    uint32_t file_length;
+
+    if (len > FILENAMESIZE || len == 0)
     	return -1;
 
     for (i = 0; i < DIRENTRIES; i++)
     {
+
         if ((strncmp(dirEntries[i].filename,  (int8_t*)(fname), len)) == 0)
         {
-           strncpy(dentry->filename, dirEntries[i].filename, len);
-           dentry->filetype = dirEntries[i]. filetype;
-           dentry->inode = dirEntries[i].inode;
-           return 0;
+        	file_length = strlen(dirEntries[i].filename);
+        	if(file_length > 32) file_length = 32;
+
+        	if(file_length==len)
+        	{
+           		strncpy(dentry->filename, dirEntries[i].filename, len);
+           		dentry->filetype = dirEntries[i]. filetype;
+           		dentry->inode = dirEntries[i].inode;
+           		return 0;
+        	}
         }
     }
     return -1;
@@ -227,8 +236,6 @@ int32_t print_directory()
 			memcpy(printpointer, formatted_byte_string, sizeof(formatted_byte_string));
 			printpointer+=sizeof(formatted_byte_string)-1;
 
-			memcpy(printpointer, "\n", sizeof("\n"));
-
 			terminal_write(1, (char*)printbuffer, sizeof(printbuffer));
 		}
 	}
@@ -252,6 +259,8 @@ int32_t print_file_by_name(const uint8_t* fname)
 {
 	dentry_t toprint;
 
+	uint8_t printbuffer[NUM_COLS];
+	uint8_t* printpointer = printbuffer;
 	uint32_t num_bytes_read;
 	uint32_t offset = 0;
 	uint32_t length = 37600; //larger than largest file in system. Can be changed as needed
@@ -278,10 +287,12 @@ int32_t print_file_by_name(const uint8_t* fname)
 		//copy filename (32 bytes) to file_name (33 bytes, null terminated) for printing
 		strncpy((char*)file_name, (char*)(toprint.filename), FILENAMESIZE);
 
-		terminal_write(1, (char*)"\n", 1);
-		terminal_write(1, (char*)"file_name: ", sizeof("file_name: "));
-		terminal_write(1, (char*)file_name, sizeof(file_name));
-		terminal_write(1, (char*)"\n", 1);
+		memcpy(printpointer, "\nfile_name: ", sizeof("\nfile_name: "));
+		printpointer+=sizeof("\nfile_name: ")-1;
+
+		memcpy(printpointer, file_name, sizeof(file_name));
+		printpointer+=sizeof(file_name)-1;
+		terminal_write(1, (char*)printbuffer, sizeof(printbuffer));
 	}
 	else
 	{
@@ -308,6 +319,9 @@ int32_t print_file_by_name(const uint8_t* fname)
 int32_t print_file_by_index(uint32_t file_num)
 {
 	dentry_t toprint;
+
+	uint8_t printbuffer[NUM_COLS];
+	uint8_t* printpointer = printbuffer;
 	uint32_t num_bytes_read;
 	uint32_t offset = 0;
 	uint32_t length = 37600; //larger than largest file in system. Can be changed as needed
@@ -331,10 +345,12 @@ int32_t print_file_by_index(uint32_t file_num)
 		//copy filename (32 bytes) to file_name (33 bytes, null terminated) for printing
 		strncpy((char*)file_name, (char*)(toprint.filename), FILENAMESIZE);
 
-		terminal_write(1, (char*)"\n", 1);
-		terminal_write(1, (char*)"file_name: ", sizeof("file_name: "));
-		terminal_write(1, (char*)file_name, sizeof(file_name));
-		terminal_write(1, (char*)"\n", 1);
+		memcpy(printpointer, "\nfile_name: ", sizeof("\nfile_name: "));
+		printpointer+=sizeof("\nfile_name: ")-1;
+
+		memcpy(printpointer, file_name, sizeof(file_name));
+		printpointer+=sizeof(file_name)-1;
+		terminal_write(1, (char*)printbuffer, sizeof(printbuffer));
 	}
 	else
 	{
@@ -356,18 +372,18 @@ int32_t print_file_by_index(uint32_t file_num)
 */
 int32_t open_file(const uint8_t * filename)
 {
-	pcb_t* curr_pcb = get_curr_pcb();
-	int i;
-
-	for(i=2; i<7; i++)
-	{
-		if(curr_pcb->open_files[i].flags == AVAILABLE)
-		{
-			curr_pcb->open_files[i].flags = NOT_AVAILABLE;
-			return i;
-		}
-	}
-	return -1;
+	// pcb_t* curr_pcb = get_curr_pcb();
+	// int i;
+    //
+	// for(i=2; i<7; i++)
+	// {
+	// 	if(curr_pcb->open_files[i].flags == AVAILABLE)
+	// 	{
+	// 		curr_pcb->open_files[i].flags = NOT_AVAILABLE;
+	// 		return i;
+	// 	}
+	// }
+	return 0;
 }
 
 /*
