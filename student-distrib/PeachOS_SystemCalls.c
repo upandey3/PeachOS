@@ -32,6 +32,7 @@ jump_table_ops directory_table = {read_directory, write_directory, open_director
 jump_table_ops closed_table = {dummy_function, dummy_function, dummy_function, dummy_function};
 
 uint8_t available_processes[MAX_PROCESSES] = {AVAILABLE, AVAILABLE};
+
 uint32_t elf_eip;
 
 /* System_Call : HALT
@@ -45,6 +46,7 @@ uint32_t elf_eip;
 int32_t SYS_HALT(uint8_t status)
 {
     cli();
+
     int index = 0;
     int retval;
     uint8_t buffer[100] = "shell";
@@ -55,23 +57,18 @@ int32_t SYS_HALT(uint8_t status)
     pcb_t * current_pcb = get_curr_pcb();
     pcb_t * parent_pcb = (pcb_t*)current_pcb->parent_pcb;
 
-    printf("Parent Process ID: %d\n", parent_pcb->process_id);
-    printf("Current Process ID: %d\n", current_pcb->process_id);
     sti();
 
     available_processes[(uint8_t)current_pcb->process_id] = AVAILABLE;
 
     if (current_pcb->process_id == parent_pcb->process_id || current_pcb->process_id == 0)
     {
-        printf("HERE\n");
-        // available_processes[(uint8_t)parent_pcb->process_id] = AVAILABLE;
         SYS_EXECUTE(buffer);
     }
-    // flush_tlb();
+
     /* If we are trying to halt the last process in the terminal,
       then execute shell again
       SOURCE: https://piazza.com/class/iwy7snh02335on?cid=911 */
-
 	tss.esp0 = current_pcb->parent_tss;
     tss.ss0 = KERNEL_DS;
 
@@ -83,9 +80,8 @@ int32_t SYS_HALT(uint8_t status)
         "jmp ret_from_halt;"
         :
         : "r"(parent_pcb->base_pointer), "r"(parent_pcb->stack_pointer)
-        : "esp", "ebp"
+        : "esp", "ebp", "eax", "ebx"
         );
-
     return 0;
 }
 
@@ -112,10 +108,11 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     k = 0;
     dentry_t dir_entry;
 
-
+    /* ------------------------------ COMMAN READING, AND SETTING BUFFERS ------------------------------ */
     while(i < TERMINAL_BUFSIZE && command[i] == ' ') // increment I to get to the filename
         i++;
-    j = i; // for example- filename starts after 49 spaces, j = i = 49.
+    j = i; // for example- filename starts after 49 spaces, j = i = 49
+
     // iterating the passed argument array to get the size of "filename"
     while((i-j) < 32 && command[i] != ' ' && command[i] != '\0' && command[i] != '\n')
     {
@@ -134,33 +131,26 @@ int32_t SYS_EXECUTE(const uint8_t* command)
         k++;
         i++;
     }
-    //printf("The argument is %s\n",arg_buffer);
     /*
      * Read the file, fill in the dir_entry
      * Use the inode to send to read_data function to get the first four bytes
      * We need to check if they are DEL E L F
      */
     if(read_dentry_by_name(file_name, &dir_entry) == -1) // find the dir_entry from the file system
-    {
         return -1;
-    }
     else
     {
-     //   terminal_write(1, "Worked\n", sizeof("Worked\n"));
-     //   terminal_write(1, (uint8_t *)file_name, size_file_name + 1);
         // get the first four characters read from the file, if they are DEL E L F then its executable
         if(read_data(dir_entry.inode, 0, executable_temp_buf, 4) == -1)
-        {
             return -1;
-        }
         /* Checking to see if it's executable, strcmp == 0 means they are same, another number means they are not */
-
         if(strncmp((const int8_t*)executable_temp_buf, (const int8_t*)executable_check, 4) != 0)
-        {
             return -1;
-        }
     }
 
+    /* ------------------------------ END OF COMMAND READING, AND SETTING BUFFERS ------------------------------ */
+
+    /* ------------------------------ GET PROCESS ID, CREATE PCB ------------------------------ */
     uint32_t process_num = get_available_process_num(); // get the available process
 
     if (process_num == -1)
@@ -170,58 +160,61 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     }
 
     pcb_t * pcb_new = pcb_init(process_num);
+    pcb_t * parentPCB = get_curr_pcb();
+
+    /* ------------------------------ DONE GETTINGPROCESS ID, DONE CREATING PCB ------------------------------ */
+
+    /* ------------------------------ SETTING CURRENT PCB'S BASE AND STACK POINTERS ------------------------------ */
     pcb_new->base_pointer = (uint32_t)(pcb_new + _8KB - 4);
     pcb_new->stack_pointer = (uint32_t)(pcb_new + _8KB - 4);
+    /* ------------------------------ DONE SETTING CURRENT PCB'S BASE AND STACK POINTERS ------------------------------ */
 
     read_data(dir_entry.inode, ELF_EIP_START, (uint8_t*)(&elf_eip), READ_SIZE); // 24-27 DOES MATTER, EIP
 
-    // elf_eip = *((uint32_t*) executable_temp_buf);
+    /* ------------------------------ SET PAGES ------------------------------ */
 
     if(pcb_new->process_id == 0) //shell
         init_page(_128MB, _8MB);
     else
         init_page(_128MB, _12MB); // other process
 
+    /* ------------------------------ DONE SET PAGES ------------------------------ */
 
-    //   printf("PDE: %d\n", page_directory[elf_eip >> PDBITSH].accessed);
+    /* ------------------------------ LOAD PROGRAM ------------------------------ */
 
     uint32_t file_offset = 0;
-
-    uint8_t * shell_base = (uint8_t*)0x08048000;                              // Loading program starting 128 MB virtual address
-
+    uint8_t * shell_base = (uint8_t*)0x08048000;  // Loading program starting 128 MB virtual address
     uint32_t file_length_size = inodes[dir_entry.inode].filelength;
     uint32_t file_length;
 
     /* Mapping executable into virtual address space */
-
     while((file_length = read_data(dir_entry.inode, file_offset, (uint8_t*)shell_base + file_offset, file_length_size - file_offset)) > 0)
-    {
         file_offset = file_offset + file_length;
-    }
 
-   // printf("PDE Check: %d\n", page_directory[elf_eip >> PDBITSH].present);
-
-    // page_directory[elf_eip >> PDBITSH].accessed = 0;
-
-    // // ESP -> EAX, EBP -> EBX
-    // asm volatile(
-    //     "movl %%esp, %0;"
-    //     "movl %%ebp, %1;"
-    //     : "=r" (pcb_esp), "=r"(pcb_ebp)
-    //     :
-    //     : "ebp", "esp"
-    //     );
-    //
-    // pcb_new->parent_stack_pointer = pcb_esp;
-    // pcb_new->parent_base_pointer = pcb_ebp;
-
+    /* ------------------------------ DONE LOADING PROGRAM ------------------------------ */
     strcpy((int8_t*)pcb_new->args, (int8_t*)arg_buffer);
+
+    /* ------------------------------ SETUP STACK FOR HALT, SET PARENT STACK POINTERS, TSS SET UP ------------------------------ */
+    asm volatile("        \n\
+        movl %%ebp, %0 \n\
+        pushl %%ebp     \n\
+        pushl $0x00     \n\
+        pushl $0x00      \n\
+        movl %%esp, %1 \n\
+        "
+        : "=r"(pcb_new->parent_base_pointer), "=r"(pcb_new->parent_stack_pointer)
+        :
+        : "cc"
+        );
+
+    parentPCB->stack_pointer = pcb_new->parent_stack_pointer;
+    parentPCB->base_pointer = pcb_new->parent_base_pointer;
 
     pcb_new->parent_tss = tss.esp0;
     tss.esp0 = (_8MB - (_8KB * (pcb_new->process_id + 1))) - 4;
-    printf("TSS.ESP0 : %x\n", tss.esp0);
     tss.ss0 = KERNEL_DS; // always  the same
 
+    /* ------------------------------ DONE SETUP STACK FOR HALT, DONE SET PARENT STACK POINTERS, DONE TSS SET UP ------------------------------ */
 
     /* What I Did
      * 1. CLI, block interrupts
@@ -255,12 +248,7 @@ int32_t SYS_EXECUTE(const uint8_t* command)
      *      http://www.intel.com/Assets/en_US/PDF/manual/253665.pdf INTEL MANUAL 6.4
      *      https://en.wikipedia.org/wiki/Inline_assembler
     */
-
-
-
-    // SS, ESP, EFLAGS, CS, EIP
-    // printf("works14\n");
-    // printf("CURR_PCB: %x\n", pcb_new);
+    uint32_t elf_eip_var = ((elf_eip & 0xFFC00000) + (_4MB)) - 4;
 
     asm volatile ("                 \n\
         cli                         \n\
@@ -276,11 +264,14 @@ int32_t SYS_EXECUTE(const uint8_t* command)
         movl %0, %%eax              \n\
         pushl %%eax                 \n\
         iret                        \n\
-        ret_from_halt:                  \n\
+        ret_from_halt:              \n\
+        movl $0, %%eax              \n\
+        leave                       \n\
+        ret                         \n\
         "
         :
-        : "r" (elf_eip), "r" (((elf_eip & 0xFFC00000) + (_4MB)) - 4)
-        : "eax"
+        : "r" (elf_eip), "r" (elf_eip_var)
+        : "eax", "edx", "esp", "ebp"
     );
     return 0;
 }
@@ -298,19 +289,19 @@ int32_t SYS_EXECUTE(const uint8_t* command)
 */
 int32_t SYS_READ(int32_t fd, void* buf, int32_t nbytes)
 {
-    //printf("SYS LINE %d", __LINE__);
-
     uint32_t vrft = fd;
     pcb_t *curr_pcb = get_curr_pcb();
 
     if (vrft > LAST_FD || curr_pcb->open_files[vrft].flags == AVAILABLE)
         return -1;
-    else{
+    else
+    {
         int a;
         a = curr_pcb->open_files[vrft].file_jumptable.fd_read(vrft, buf, nbytes);
         return a;
     }
 }
+
 /* System_Call : WRITE
  * DESCRIPTION:
  *      This system call writes data to the terminal or to a device (RTC)
@@ -329,13 +320,10 @@ int32_t SYS_WRITE(int32_t fd, const void* buf, int32_t nbytes)
 
     pcb_t *curr_pcb = get_curr_pcb();
     if (vrft > LAST_FD || curr_pcb->open_files[vrft].flags == AVAILABLE)
-    {
         return -1;
-    }
+
     else
-    {
         return curr_pcb->open_files[vrft].file_jumptable.fd_write(vrft, buf, nbytes);
-    }
     return 0;
 }
 
@@ -353,23 +341,18 @@ int32_t SYS_OPEN(const uint8_t* filename)
     uint32_t i = 0;
     dentry_t dir_entry;
     pcb_t *curr_pcb = get_curr_pcb();
-    // printf("System_Call Line no %d\n", __LINE__);
 
     // find the dir_entry from the file system
     if (read_dentry_by_name(filename, &dir_entry) == -1)
     {
-      //  printf("failed file name is %s\n", dir_entry.filename);
         return -1;
     }
     else
     {
-          //  printf("successful file name is %s\n", dir_entry.filename);
         for (i = FIRST_FD; i <= LAST_FD; i++)
         {
             if (curr_pcb->open_files[i].flags == NOT_AVAILABLE)
             {
-                // printf("System_Call Line no %d\n", __LINE__);
-
                 if (i == LAST_FD) // If maximum number of files are open
                     return -1;
             }
@@ -380,9 +363,6 @@ int32_t SYS_OPEN(const uint8_t* filename)
                 curr_pcb->open_files[i].file_position = OFFSET0;
                 curr_pcb->open_files[i].inode = dir_entry.inode;
                 break;
-                //
-                // for(j = 0; j < MAX_FILENAME_SIZE; j++)
-                //     curr_pcb->filenames[i][j] = filename[j];
             }
         }
     }
@@ -406,9 +386,9 @@ int32_t SYS_OPEN(const uint8_t* filename)
         default:
             break;
      }
-    //printf("The inode for '.' is %d: In open, the fd for '.' is %d\n", curr_pcb->open_files[i].inode, i);
     return i;
 }
+
 /* System_Call : CLOSE
  * DESCRIPTION:
  *      This system call closes the specified file descriptor and
@@ -420,8 +400,6 @@ int32_t SYS_OPEN(const uint8_t* filename)
 */
 int32_t SYS_CLOSE(int32_t fd)
 {
-    // int i = 0;
-    // uint8_t fname[MAX_FILENAME_SIZE]; // UNUSED
     pcb_t * curr_pcb = get_curr_pcb();
     if (fd < FIRST_FD || fd > LAST_FD || curr_pcb->open_files[fd].flags == AVAILABLE)
         return -1;
@@ -589,7 +567,6 @@ pcb_t * pcb_init(uint32_t process_num)
     {
         curr_pcb->parent_process_id = -1;
         parent_pcb->process_id = -1;
-        // parent_pcb->parent_process_id = 0;
     }
     else
         curr_pcb->parent_process_id = parent_pcb->process_id;

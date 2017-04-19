@@ -59,7 +59,6 @@ void pageDirectory_init()
 	page_table[VIDEO>>12].present = 1;
 }
 
-
 /*****************************************************************
  *
  * enablePaging
@@ -75,28 +74,25 @@ void pageDirectory_init()
 ****************************************************************/
 void enablePaging()
 {
-	asm volatile("					    \n\
-				 movl %0, %%eax 		\n\
-                 movl %%eax, %%cr3		\n\
-                 movl %%cr4, %%eax		\n\
-                 orl $0x00000010, %%eax \n\
-                 movl %%eax, %%cr4		\n\
-                 movl %%cr0, %%eax		\n\
-                 orl $0x80000000, %%eax	\n\
-                 movl %%eax, %%cr0		\n\
-                 "
-                 :                        /* no outputs */
-                 : "r"(page_directory)    /* input */
-                 : "eax"                  /* clobbered register */
-                 );
-				/* movl %0, %%eax: load page_directory into cr3 */
-	 			/* orl $0x00000010, %%eax: set bit 5 in CR4 (PAE flag)  */
-				/* orl $0x80000000, %%eax: set bit 31 in CR0 (PG flag)  */
+	asm volatile("				\n\
+		movl %0, %%eax 			\n\
+		movl %%eax, %%cr3		\n\
+		movl %%cr4, %%eax		\n\
+		orl $0x00000010, %%eax 	\n\
+		movl %%eax, %%cr4		\n\
+		movl %%cr0, %%eax		\n\
+		orl $0x80000000, %%eax	\n\
+		movl %%eax, %%cr0		\n\
+		"
+		:                        /* no outputs */
+		: "r"(page_directory)    /* input */
+		: "eax"                  /* clobbered register */
+		);
 }
 
 /*****************************************************************
  *
- * 	page_init
+ * 	init_page
  *  DESCRIPTION:
  *          This function initializes a new Page for a new process
  *  INPUTs: a virtual address and a physical address (passed by reference)
@@ -111,7 +107,6 @@ void enablePaging()
 void init_page (uint32_t va, uint32_t pa)
 {
 	uint32_t PD_index = (va) >> PDBITSH;
-	//uint32_t Page_addr = ((pa) >> PDBITSH) << PDBITS;
 
 	page_directory[PD_index].PTBA =((pa) >> PDBITSH) << PDBITS;
 	page_directory[PD_index].available = 0;
@@ -128,12 +123,23 @@ void init_page (uint32_t va, uint32_t pa)
 	flush_tlb();
 }
 
+/*****************************************************************
+ *
+ * 	init_set_page
+ *  DESCRIPTION:
+ *          This function initializes a new Page for a new process
+ *  INPUTs: a virtual address and a physical address (passed by reference)
+ *  OUTPUT: none
+ *  SIDE EFFECTS: Sets up a page directory in memory
+ *  SOURCE: http://wiki.osdev.org/Paging#Page_Table
+ *          https://courses.engr.illinois.edu/ece391/secure/references/IA32-ref-manual-vol-3.pdf
+ *					Helpful pages: 3-22 to 3-28
+ *
+****************************************************************/
 void init_set_page (uint32_t va, uint32_t pa)
 {
 	uint32_t PD_index = (va) >> PDBITSH;
-	uint32_t Page_addr = ((pa) >> PDBITSH) << PDBITS;
 	page_directory[PD_index].PTBA = ((pa) >> PDBITSH) << PDBITS;
-
 	flush_tlb();
 }
 
