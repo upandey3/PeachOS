@@ -12,6 +12,7 @@
 #include "PeachOS_IDT.h"
 #include "PeachOS_Interrupt.h"
 #include "PeachOS_RTC.h"
+#include "PeachOS_PIT.h"
 #include "PeachOS_Terminal.h"
 #include "PeachOS_FileSys.h"
 #include "PeachOS_SystemCall_Test.h"
@@ -177,6 +178,9 @@ entry (unsigned long magic, unsigned long addr)
 
 	// printf("Enabling Terminal\n");
 	terminal_init();
+
+	// Initialize the PIT
+	pit_init();
 
 	/* Execute the first program (`shell') ... */
 	//call_sys_halt(2);
