@@ -108,7 +108,7 @@ void init_page (uint32_t va, uint32_t pa)
 {
 	uint32_t PD_index = (va) >> PDBITSH;
 
-	page_directory[PD_index].PTBA =((pa) >> PDBITSH) << PDBITS;
+	page_directory[PD_index].PTBA = (pa >> PTBITSH);
 	page_directory[PD_index].available = 0;
 	page_directory[PD_index].reserved = 0;
 	page_directory[PD_index].accessed = 0;
@@ -139,7 +139,7 @@ void init_page (uint32_t va, uint32_t pa)
 void init_set_page (uint32_t va, uint32_t pa)
 {
 	uint32_t PD_index = (va) >> PDBITSH;
-	page_directory[PD_index].PTBA = ((pa) >> PDBITSH) << PDBITS;
+	page_directory[PD_index].PTBA = (pa >> PTBITSH);
 	flush_tlb();
 }
 

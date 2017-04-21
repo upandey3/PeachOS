@@ -139,11 +139,12 @@ int32_t terminal_write(int32_t fd, const void* buf, int32_t nbytes)
     for(temp = 0; temp < nbytes; temp++)
     {
         uint8_t buf_char = *((uint8_t*)buf + temp);
-        if(buf_char == '\0')
-        {
-            putc('\n');
-            break;
-        }
+        // if(buf_char == '\0')
+        // {
+        //     putc('\n');
+        //     break;
+        //     //continue;
+        // }
         putc(buf_char);
     }
     if(temp > 0)

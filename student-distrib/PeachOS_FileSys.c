@@ -410,8 +410,6 @@ int32_t close_file(int32_t fd){
 */
 int32_t read_file(int32_t fd, void * buf, int32_t nbytes){
 
-	inode_t * dest_inode;
-    uint32_t * inode_data_array;
     uint32_t file_length, file_inode, file_position;
     uint32_t num_bytes, new_pos;
     pcb_t * curr_pcb;
@@ -422,10 +420,7 @@ int32_t read_file(int32_t fd, void * buf, int32_t nbytes){
     curr_pcb = get_curr_pcb();
     file_inode = curr_pcb->open_files[fd].inode;
     file_position = curr_pcb->open_files[fd].file_position;
-
-    dest_inode = inodes + file_inode;
-    inode_data_array = (uint32_t *)dest_inode;
-    file_length = inode_data_array[0];
+    file_length = inodes[file_inode].filelength;
 
     if (file_position >= file_length)
         return 0;

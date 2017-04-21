@@ -8,7 +8,7 @@
 #define MAX_OPEN_FILES 8
 #define MAX_FILENAME_SIZE 32
 
-#define MAX_PROCESSES 2
+#define MAX_PROCESSES 6
 
 #define LOWER_13_BITS_MASK 0xFFFFE000
 
@@ -106,11 +106,13 @@ int32_t SYS_SET_HANDLER(int32_t signum, void* handler_address);
 int32_t SYS_SIGRETURN(void);
 
 /*** HELPER FUNCTIONS ***/
+uint32_t parse_command(const uint8_t* command, uint8_t* file_name, uint8_t* arg_buffer);
+uint32_t check_executable(uint8_t* file_name, uint32_t* dir_ptr);
 pcb_t *get_curr_pcb();
 int32_t get_available_process_num();
 uint32_t set_available_process_num();
 int32_t dummy_function();
-pcb_t *pcb_init();
+pcb_t *pcb_fork();
 pcb_t * get_curr_pcb_process(uint8_t process_num);
 
 #endif
