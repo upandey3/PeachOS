@@ -9,10 +9,10 @@ int main ()
 {
     int32_t cnt, rval;
     uint8_t buf[BUFSIZE];
-    ece391_fdputs (1, (uint8_t*)"Starting 391 Shell\n");
+    ece391_fdputs (1, (uint8_t*)"Initializing PeachOS Shell...\n");
 
     while (1) {
-        ece391_fdputs (1, (uint8_t*)"391OS> ");
+        ece391_fdputs (1, (uint8_t*)"PeachOS >");
 	if (-1 == (cnt = ece391_read (0, buf, BUFSIZE-1))) {
 	    ece391_fdputs (1, (uint8_t*)"read from keyboard failed\n");
 	    return 3;
@@ -33,4 +33,3 @@ int main ()
 	    ece391_fdputs (1, (uint8_t*)"program terminated abnormally\n");
     }
 }
-
