@@ -5,6 +5,7 @@
 
 page_directory_t page_directory[ONE_K] __attribute__((aligned(FOUR_K)));
 page_table_t page_table[ONE_K] __attribute__((aligned(FOUR_K)));
+page_table_t video_page_table[ONE_K] __attribute__((aligned(FOUR_K)));
 
 
 /*****************************************************************
@@ -141,6 +142,35 @@ void init_set_page (uint32_t va, uint32_t pa)
 	uint32_t PD_index = (va) >> PDBITSH;
 	page_directory[PD_index].PTBA = (pa >> PTBITSH);
 	flush_tlb();
+}
+
+/*****************************************************************
+ *
+ * 	map_video_page
+ *  DESCRIPTION:
+ *          This function initializes a new Page for a new process
+ *  INPUTs: a virtual address and a physical address (passed by reference)
+ *  OUTPUT: none
+ *  SIDE EFFECTS: Sets up a page directory in memory
+ *  SOURCE: http://wiki.osdev.org/Paging#Page_Table
+ *          https://courses.engr.illinois.edu/ece391/secure/references/IA32-ref-manual-vol-3.pdf
+ *					Helpful pages: 3-22 to 3-28
+ *
+****************************************************************/
+void map_video_page(uint32_t virtualAddr, uint32_t physicalAddr, uint32_t page)
+{
+	// init page directory entry
+    page_directory[virtualAddr/_4MB].PTBA = (((uint32_t)video_page_table)>>12);
+    page_directory[virtualAddr/_4MB].present = 1;
+    page_directory[virtualAddr/_4MB].read_write = 1;
+    page_directory[virtualAddr/_4MB].user_supervisor = 1;
+
+	video_page_table[page].present = 1;
+    video_page_table[page].read_write = 1;
+    video_page_table[page].user_supervisor = 1;
+    video_page_table[page].PBA = physicalAddr>>12;
+
+    flush_tlb();
 }
 
 /*****************************************************************

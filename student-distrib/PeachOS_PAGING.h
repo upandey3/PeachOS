@@ -76,6 +76,9 @@ void init_page (uint32_t va, uint32_t pa);
 /* Initializes a new page directory index for a new process */
 void init_set_page (uint32_t va, uint32_t pa);
 
+/* Initializes video memory for VIDMAP */
+void map_video_page(uint32_t virtualAddr, uint32_t physicalAddr, uint32_t page);
+
 /* This function uses assembly linkage to flush the tlb */
 void flush_tlb();
 

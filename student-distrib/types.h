@@ -9,12 +9,15 @@
 
 #define NULL 0
 
+#define _136MB 0x8800000
+#define _132MB 0x8400000
 #define _128MB 0x8000000
 #define PROGRAM_IMG_ADDR 0x08048000
 #define _12MB 0xC00000
 #define _8MB 0x800000
 #define _4MB 0x400000
 #define _8KB 0x2000
+
 
 
 #ifndef ASM
