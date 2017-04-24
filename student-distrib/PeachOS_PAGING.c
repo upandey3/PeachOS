@@ -7,6 +7,7 @@ page_directory_t page_directory[ONE_K] __attribute__((aligned(FOUR_K)));
 page_table_t page_table[ONE_K] __attribute__((aligned(FOUR_K)));
 page_table_t video_page_table[ONE_K] __attribute__((aligned(FOUR_K)));
 
+
 /*****************************************************************
  *
  * paging_init

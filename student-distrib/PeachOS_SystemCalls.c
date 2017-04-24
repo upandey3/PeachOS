@@ -109,7 +109,8 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     /*----------- Read the file, and check if executable ------------ */
      if (-1 == check_executable(file_name, (uint32_t *)dir_ptr))
         return -1;
-    if (strncmp((const int8_t*)file_name,(const int8_t*)shell, 5) == 0)
+
+    if (strncmp((const int8_t*)file_name, (const int8_t*)shell, 5) == 0)
         clear_screen();
 
     /* ------------ Get Process ID, Create PCB -------------------- */
@@ -281,16 +282,10 @@ uint32_t check_executable(uint8_t* file_name, uint32_t* dir_ptr) {
 int32_t SYS_READ(int32_t fd, void* buf, int32_t nbytes)
 {
     uint32_t vrft = fd;
-    pcb_t *curr_pcb = get_curr_pcb();
-
-    if (vrft > LAST_FD || curr_pcb->open_files[vrft].flags == AVAILABLE)
+    if (vrft > LAST_FD || get_curr_pcb()->open_files[vrft].flags == AVAILABLE)
         return -1;
     else
-    {
-        int a;
-        a = curr_pcb->open_files[vrft].file_jumptable.fd_read(vrft, buf, nbytes);
-        return a;
-    }
+        return get_curr_pcb()->open_files[vrft].file_jumptable.fd_read(vrft, buf, nbytes);
 }
 
 /* System_Call : WRITE
@@ -308,14 +303,10 @@ int32_t SYS_READ(int32_t fd, void* buf, int32_t nbytes)
 int32_t SYS_WRITE(int32_t fd, const void* buf, int32_t nbytes)
 {
     uint32_t vrft = fd;
-
-    pcb_t *curr_pcb = get_curr_pcb();
-    if (vrft > LAST_FD || curr_pcb->open_files[vrft].flags == AVAILABLE)
+    if (vrft > LAST_FD || get_curr_pcb()->open_files[vrft].flags == AVAILABLE)
         return -1;
-
     else
-        return curr_pcb->open_files[vrft].file_jumptable.fd_write(vrft, buf, nbytes);
-    return 0;
+        return get_curr_pcb()->open_files[vrft].file_jumptable.fd_write(vrft, buf, nbytes);
 }
 
 /* System_Call : OPEN
@@ -438,15 +429,11 @@ int32_t SYS_VIDMAP(uint8_t ** screen_start)
 {
     /* Map Virtual Address to Physical Address */
     if (screen_start == NULL || screen_start == (uint8_t**)_4MB)
-    {
         return -1;
-    }
-    map_video_page((uint32_t)_132MB, (uint32_t)0xb8000, vid_flag*2);
 
+    map_video_page((uint32_t)_132MB, (uint32_t)VIDEO, OFFSET0);
     *screen_start = (uint8_t*)_132MB;
-
-  //  video_mem = (char *)(*screen_start);
-    return (_132MB + (vid_flag * 0x2000));
+    return _132MB;
 }
 
 /* System_Call : SET_HANDLER

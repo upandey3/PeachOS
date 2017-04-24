@@ -21,7 +21,7 @@ void initialize_idt();
 void interrupt_name () { \
   cli();                    \
   printf("%s\n", #string); \
-  while(1); \
+  SYS_HALT(1); \
 }
 
 /* send each software exception to defined macro in order to

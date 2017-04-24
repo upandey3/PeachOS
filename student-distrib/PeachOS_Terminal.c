@@ -151,13 +151,16 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes)
     uint32_t term_index = 0;
     uint8_t* term_buf = (uint8_t*)buf; // poointing at the same thing
 
-    for(term_index = 0; term_index < keyboard_index && term_index < LIMIT && term_index < nbytes; term_index++)
+    for(term_index = 0; keyboard_buffer[term_index] != '\n' && term_index < keyboard_index && term_index < LIMIT && term_index < nbytes; term_index++)
     {
         term_buf[term_index] = keyboard_buffer[term_index]; // copying over the keyboard buffer to buf we send back
     }
 
     buffer_limit_flag = 0; // set the overflow flag to 0
     terminal_flag_keyboard = 0; // turn off the terminal flag
+    // printf("The read buf is: %s", buf);
+    // printf("String length = %d, term_index is %d\n", strlen(buf), term_index);
+
     return term_index; // return how many bytes were written on the buf
 }
 
