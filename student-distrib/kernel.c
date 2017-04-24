@@ -12,7 +12,6 @@
 #include "PeachOS_IDT.h"
 #include "PeachOS_Interrupt.h"
 #include "PeachOS_RTC.h"
-#include "PeachOS_PIT.h"
 #include "PeachOS_Terminal.h"
 #include "PeachOS_FileSys.h"
 #include "PeachOS_SystemCall_Test.h"
@@ -26,6 +25,7 @@
 void
 entry (unsigned long magic, unsigned long addr)
 {
+    vid_flag = 0;
 	multiboot_info_t *mbi;
 
 	/* Clear the screen. */
@@ -177,15 +177,17 @@ entry (unsigned long magic, unsigned long addr)
 	paging_init();
 
 	// printf("Enabling Terminal\n");
+    vid_flag +=1;
 	terminal_init();
 
-	// Initialize the PIT
-	pit_init();
+    terminal_launch(0);
+    terminal_launch(1);
+    terminal_launch(2);
 
 	/* Execute the first program (`shell') ... */
 	//call_sys_halt(2);
 
-	clear_screen();
+	// clear_screen();
 	//testCat();
 	uint8_t buffer[100] = "shell";
 	call_sys_execute(buffer);

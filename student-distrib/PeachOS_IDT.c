@@ -3,7 +3,6 @@
 #include "x86_desc.h"
 #include "PeachOS_RTC.h"
 #include "PeachOS_Keyboard.h"
-#include "PeachOS_PIT.h"
 #include "PeachOS_Interrupt.h"
 
 /* references used here:
@@ -79,7 +78,7 @@ void initialize_idt () {
     idt[i].dpl = 0x0;                                                           // privilege level set to 0
     idt[i].present = 0x1;
 
-    if (i > PIT_INT)
+    if (i > PIC_INT)
     {
       idt[i].reserved3 = 0x1;
       SET_IDT_ENTRY(idt[i], UNDEFINED_INTERRUPT);                               // if index is greater than 0x20, set the IDT entry to UNDEFINED_INTERRUPT
@@ -120,7 +119,6 @@ void initialize_idt () {
   SET_IDT_ENTRY (idt[SYS_CAL], sysCall_handler);
   SET_IDT_ENTRY (idt[RTC_INT], rtc_handler);
   SET_IDT_ENTRY (idt[KBD_INT], keyboard_handler);
-  SET_IDT_ENTRY (idt[PIT_INT], pit_handler);
 
   /* load the idt_desc_ptr using lidt in order to load the IDT to memory */
   lidt(idt_desc_ptr);

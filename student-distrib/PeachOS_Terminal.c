@@ -6,6 +6,7 @@
 
 #define LIMIT 128
 
+uint8_t terminal_colors[MAX_TERMINAL] = {(uint8_t)0x0F, (uint8_t)0x17, (uint8_t)0x2F};
 /*
  * terminal_open
  *  DESCRIPTION:
@@ -19,23 +20,71 @@
 */
 void terminal_init()
 {
-    uint32_t i;
+    uint32_t i, j;
 
-    terminal.terminal_index = 0;
-    for(i = 0; i < TERMINAL_BUFSIZE; i++)
+    for(i = 0; i < MAX_TERMINAL; i++)
     {
-        terminal.terminal_buf[i] = '\0'; // clear out the terminal_buf, so we can put things in it later
+        if(vid_flag >= 1)
+        {
+            vid_flag--;
+            uint8_t *vterm_base_addr;
+            terminal[i].terminal_video_mem = (char *)SYS_VIDMAP(&vterm_base_addr); // now we access the video memory and clear it out and color it
+            printf("Terminal %d's Video Memory: %x\n", i, terminal[i].terminal_video_mem);
+            vid_flag += 2;
+        }
+
+        terminal[i].terminal_index = i;
+
+        terminal[i].terminal_x_pos = 0; // intialize them with 0
+        terminal[i].terminal_y_pos = 0;
+
+
+        for (j = 0; j < NUM_ROWS*NUM_COLS; j++)
+        {
+            *(uint8_t *)(terminal[i].terminal_video_mem + (j << 1)) = ' ';
+            *(uint8_t *)(terminal[i].terminal_video_mem + (j << 1) + 1) = terminal_colors[vid_flag];
+        }
+    }
+}
+
+void terminal_launch(uint8_t terminal_num)
+{
+    uint32_t j = 0;
+    vid_flag = terminal_num;
+
+    for (j = 0; j < NUM_ROWS*NUM_COLS; j++)
+    {
+        *(uint8_t *)(terminal[terminal_num].terminal_video_mem + (j << 1)) = ' ';
+        *(uint8_t *)(terminal[terminal_num].terminal_video_mem + (j << 1) + 1) = terminal_colors[vid_flag];
     }
 
-    terminal.terminal_x_pos = 0; // intialize them with 0
-    terminal.terminal_y_pos = 0;
+    terminal[terminal_num].terminal_x_pos = 0;
+    terminal[terminal_num].terminal_y_pos = 0;
+    update_cursor();
+    printf("Terminal %d's Video Memory: %x\n", 0, terminal[0].terminal_video_mem);
+    printf("Terminal %d's Video Memory: %x\n", 1, terminal[1].terminal_video_mem);
+    printf("Terminal %d's Video Memory: %x\n", 2, terminal[2].terminal_video_mem);
+    // uint8_t buffer[100] = "testprint";
+	// call_sys_execute(buffer);
 
-    // terminal.terminal_video_mem = (char *)TERMINAL_VIDEO; // now we access the video memory and clear it out and color it
-    // for (i = 0; i < NUM_ROWS*NUM_COLS; i++)
-    // {
-    //     *(uint8_t *)(terminal.terminal_video_mem + (i << 1)) = ' ';
-    //     *(uint8_t *)(terminal.terminal_video_mem + (i << 1) + 1) = TERMINAL_ATTRIB;
-    // }
+    return;
+}
+
+void terminal_switch(uint8_t terminal_num)
+{
+    vid_flag = terminal_num;
+    uint32_t j = 0;
+    update_cursor();
+    for (j = 0; j < NUM_ROWS*NUM_COLS; j++)
+    {
+        putc(*(uint8_t*)(terminal[terminal_num].terminal_video_mem + (j << 1)));
+        *(uint8_t *)(terminal[terminal_num].terminal_video_mem + (j << 1) + 1) = terminal_colors[vid_flag];
+    }
+    // uint8_t *vterm_base_addr;
+    // terminal[terminal_num].terminal_video_mem = (char *)SYS_VIDMAP(&vterm_base_addr); // now we access the video memory and clear it out and color it
+
+
+    return;
 }
 
 /*
@@ -96,7 +145,7 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes)
     terminal_flag_keyboard = 1; // If this is ON that means we are using the terminal functions.
     janky_spinlock_flag = 0; // janky_spinlock to get keyboard inputs
     keyboard_index = 0; // keybaord index starts out as 0 initally, so we dont take in inputs before read is used
-    // keyboard_terminal_index = keyboard_index;
+
     while(janky_spinlock_flag != 1); // voltalite flag, flag changes to 1 when ENTER_KEY is presseds
 
     uint32_t term_index = 0;
@@ -106,7 +155,7 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes)
     {
         term_buf[term_index] = keyboard_buffer[term_index]; // copying over the keyboard buffer to buf we send back
     }
-    // keyboard_terminal_index = term_index; // get it equal to the highest keyboard_index then next time the read function is called, we make it 0;
+
     buffer_limit_flag = 0; // set the overflow flag to 0
     terminal_flag_keyboard = 0; // turn off the terminal flag
     return term_index; // return how many bytes were written on the buf
@@ -130,27 +179,22 @@ int32_t terminal_read(int32_t fd, void* buf, int32_t nbytes)
 int32_t terminal_write(int32_t fd, const void* buf, int32_t nbytes)
 {
     int32_t temp;
-    // uint32_t size = sizeof(buf);
-    // uint32_t size_2 = sizeof(uint8_t);
-    // size = size / size_2;
-    // cli(); // critical section we are using the keybaord buffer to write
-        // temp = printf((int8_t *)buf); // print the buf that was sent in
-        // return temp;
+    uint8_t buffer[12] = "XXXCLEARXXX";
+
+    if (strncmp((const int8_t*)buffer, (const int8_t*)buf, 11) == 0)
+    {
+        clear_screen();
+        return 0;
+    }
     for(temp = 0; temp < nbytes; temp++)
     {
         uint8_t buf_char = *((uint8_t*)buf + temp);
-        if(buf_char == '\0')
-        {
-            putc('\n');
-            break;
-        }
         putc(buf_char);
     }
     if(temp > 0)
         return temp;
     else
         return -1;
-    // sti();
 }
 
 /*

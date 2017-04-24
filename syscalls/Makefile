@@ -10,7 +10,7 @@ ALL: cat grep hello ls pingpong counter shell sigtest testprint syserr
 %.o: %.S
 	$(CC) $(CFLAGS) -c -Wall -o $@ $<
 
-%.exe: ece391%.o ece391syscall.o ece391support.o
+%.exe: ece391%.o ece391syscall.o ece391support.o ece391_lib.o
 	$(CC) $(LDFLAGS) -o $@ $^
 
 %: %.exe

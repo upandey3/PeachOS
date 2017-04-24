@@ -29,7 +29,6 @@ interrupt_name:                   ;\
 /* RTC and Keyboard input hanndlers called now */
 ALL_INTERRUPT_HANDLER(keyboard_handler, keyboard_input_handler);
 ALL_INTERRUPT_HANDLER(rtc_handler, rtc_input_handler);
-ALL_INTERRUPT_HANDLER(pit_handler, pit_input_handler);
 /*
  *  SYSTEM_CALL_HANDLER
  *  DESCRIPTION:

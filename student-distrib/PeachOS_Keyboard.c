@@ -173,14 +173,15 @@ void keyboard_input_handler()
 
         /* SKELTON CODE IN-CASE WE DO SOME SPECIAL FUNCTIONS */
         case F1_PRESSED:
-            send_eoi(KEYBOARD_IRQ);
-            sti();
-            terminal_test();
-            enable_irq(KEYBOARD_IRQ);
+                terminal_switch(0);
             break;
         case F2_PRESSED:
+            if(ALT_PRESSED_1)
+                terminal_switch(1);
             break;
         case F3_PRESSED:
+            if(ALT_PRESSED_1)
+                terminal_switch(2);
             break;
         default:
             keyboard_key_pressed(scan_input);
