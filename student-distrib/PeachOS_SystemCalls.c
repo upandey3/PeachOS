@@ -1,4 +1,3 @@
-
 #include "lib.h"
 #include "types.h"
 #include "x86_desc.h"
@@ -34,7 +33,7 @@ jump_table_ops closed_table = {dummy_function, dummy_function, dummy_function, d
 
 uint8_t available_processes[MAX_PROCESSES] = {AVAILABLE, AVAILABLE, AVAILABLE, AVAILABLE, AVAILABLE, AVAILABLE};
 uint32_t elf_eip;
-uint8_t shell[100] = "shell";
+uint8_t shell[ARGSIZE] = "shell";
 
 
 /* System_Call : HALT
@@ -49,7 +48,7 @@ int32_t SYS_HALT(uint8_t status)
 {
     cli();
 
-    int index = 0;
+    int index = NUM_ZERO;
 
     while (index < MAX_OPEN_FILES)
         SYS_CLOSE(index++);
@@ -60,7 +59,7 @@ int32_t SYS_HALT(uint8_t status)
     sti();
 
     available_processes[(uint8_t)current_pcb->process_id] = AVAILABLE;
-    if (current_pcb->process_id == parent_pcb->process_id || current_pcb->process_id == 0)
+    if (current_pcb->process_id == parent_pcb->process_id || current_pcb->process_id == NUM_ZERO)
     {
         clear_screen();
         SYS_EXECUTE(shell);
@@ -73,7 +72,7 @@ int32_t SYS_HALT(uint8_t status)
     tss.ss0 = KERNEL_DS;
 
     init_set_page(_128MB, _8MB + (parent_pcb->process_id * _4MB)); // Needs to change
-
+    // terminal_write(1, "\n", sizeof("\n"));
 
     asm volatile(
         "movl %0, %%ebp;"
@@ -82,7 +81,7 @@ int32_t SYS_HALT(uint8_t status)
         "jmp ret_from_halt;"
         :
         : "r"(parent_pcb->base_pointer), "r"(parent_pcb->stack_pointer), "r"((uint32_t)status)
-        : "esp", "ebp", "eax", "ebx"
+        : "esp", "ebp", "eax"
         );
     return 0;
 }
@@ -97,9 +96,9 @@ int32_t SYS_HALT(uint8_t status)
  */
 int32_t SYS_EXECUTE(const uint8_t* command)
 {
-    uint8_t file_name[32] = {'\0'};
-    uint32_t file_name_length = 1;
-    uint8_t arg_buffer[100] = {'\0'};
+    uint8_t file_name[FILENAMESIZE] = {'\0'};
+    uint32_t file_name_length = NUM_ZERO; // was 1 before
+    uint8_t arg_buffer[ARGSIZE] = {'\0'};
     dentry_t dir_entry, * dir_ptr;
     dir_ptr = &dir_entry;
 
@@ -109,7 +108,7 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     /*----------- Read the file, and check if executable ------------ */
      if (-1 == check_executable(file_name, (uint32_t *)dir_ptr))
         return -1;
-    if (strncmp((const int8_t*)file_name, (const int8_t*)shell, 5) == 0)
+    if (strncmp((const int8_t*)file_name, (const int8_t*)shell, 5) == NUM_ZERO)
         clear_screen();
 
     /* ------------ Get Process ID, Create PCB -------------------- */
@@ -126,7 +125,7 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     /* Get the starting instruction stored in bytes 24-27 of the executable file*/
     read_data(dir_entry.inode, ELF_EIP_START, (uint8_t *)&elf_eip, ELF_ADDR_SIZE);
 
-    if (child_PCB->process_id == 0) // Process for shell is at 8 MB
+    if (child_PCB->process_id == NUM_ZERO) // Process for shell is at 8 MB
         init_page(_128MB, _8MB);    // Set up page directory
     else                            // Other processes are at 12 MB
         init_page(_128MB, _8MB + (child_PCB->process_id * _4MB));  // Needs to change
@@ -157,7 +156,7 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     tss.esp0 = (_8MB - (_8KB * (child_PCB->process_id + 1))) - PCB_PTR_BYTES;
     tss.ss0 = KERNEL_DS; // always  the same
 
-    uint32_t elf_eip_var = ((elf_eip & 0xFFC00000) + (_4MB)) - PCB_PTR_BYTES;
+    uint32_t elf_eip_var = ((elf_eip & HIGHER_10_BITS_MASK) + (_4MB)) - PCB_PTR_BYTES;
 
     /* What I Did
      * 1. CLI, block interrupts
@@ -217,10 +216,10 @@ int32_t SYS_EXECUTE(const uint8_t* command)
 
 }
 
-uint32_t parse_command(const uint8_t* command, uint8_t* file_name, uint8_t* arg_buffer){
-
+uint32_t parse_command(const uint8_t* command, uint8_t* file_name, uint8_t* arg_buffer)
+{
     uint32_t file_name_length = 1;
-    int i = 0, j = 0, k = 0;
+    int i = NUM_ZERO, j = NUM_ZERO, k = NUM_ZERO;
     /* ------------  Command parsing, and collecting arguments ---------------- */
     while(i < TERMINAL_BUFSIZE && command[i] == ' ')
         i++;  // increment i to get to the filename
@@ -247,8 +246,8 @@ uint32_t parse_command(const uint8_t* command, uint8_t* file_name, uint8_t* arg_
  */
 uint32_t check_executable(uint8_t* file_name, uint32_t* dir_ptr) {
 
-    uint8_t exec_check[4] = {ASCII_DEL, ASCII_E, ASCII_L, ASCII_F}; // del E L F stored in the buffer
-    uint8_t exec_buf[4];
+    uint8_t exec_check[NUM_FOUR] = {ASCII_DEL, ASCII_E, ASCII_L, ASCII_F}; // del E L F stored in the buffer
+    uint8_t exec_buf[NUM_FOUR];
     dentry_t * dir_entry;
     dir_entry = (dentry_t *) dir_ptr;
 
@@ -257,10 +256,10 @@ uint32_t check_executable(uint8_t* file_name, uint32_t* dir_ptr) {
     else
     {
         // get the first four characters read from the file, if they are DEL E L F then its executable
-        if(read_data(dir_entry->inode, OFFSET0, exec_buf, 4) == -1)
+        if(read_data(dir_entry->inode, OFFSET0, exec_buf, NUM_FOUR) == -1)
             return -1;
         /* Checking to see if it's executable, strcmp == 0 means they are same, another number means they are not */
-        if(strncmp((const int8_t*)exec_buf, (const int8_t*)exec_check, 4) != 0)
+        if(strncmp((const int8_t*)exec_buf, (const int8_t*)exec_check, NUM_FOUR) != NUM_ZERO)
             return -1;
     }
     return 0;

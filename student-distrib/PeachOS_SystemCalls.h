@@ -11,6 +11,7 @@
 #define MAX_PROCESSES 6
 
 #define LOWER_13_BITS_MASK 0xFFFFE000
+#define HIGHER_10_BITS_MASK 0xFFC00000
 
 #define NOT_AVAILABLE 0
 #define AVAILABLE 1
@@ -29,7 +30,11 @@
 #define WRITE 2
 #define CLOSE 3
 
-#define argsize 100
+#define ARGSIZE 100
+#define NUM_ZERO 0
+#define NUM_FOUR 4
+
+#define SHELL_NAME_SIZE
 
 #define ASCII_DEL 0x7f
 #define ASCII_E 0x45
@@ -81,7 +86,7 @@ typedef struct {
     uint8_t filenames[MAX_OPEN_FILES][MAX_FILENAME_SIZE];
     int8_t process_id;
     int8_t parent_process_id;
-    uint8_t args[argsize];
+    uint8_t args[ARGSIZE];
     uint32_t stack_pointer;
     uint32_t base_pointer;
     uint32_t parent_stack_pointer;
