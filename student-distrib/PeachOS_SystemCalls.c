@@ -72,7 +72,6 @@ int32_t SYS_HALT(uint8_t status)
     tss.ss0 = KERNEL_DS;
 
     init_set_page(_128MB, _8MB + (parent_pcb->process_id * _4MB)); // Needs to change
-    // terminal_write(1, "\n", sizeof("\n"));
 
     asm volatile(
         "movl %0, %%ebp;"

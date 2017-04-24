@@ -181,7 +181,7 @@ entry (unsigned long magic, unsigned long addr)
 	/* Execute the first program (`shell') ... */
 	//call_sys_halt(2);
 
-	clear_screen();
+	// clear_screen();
 	//testCat();
 	uint8_t buffer[100] = "testprint";
 	call_sys_execute(buffer);
