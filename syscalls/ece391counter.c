@@ -17,7 +17,7 @@ int main ()
     }
     buf[cnt] = '\0';
 
-    if ((ece391_strlen(buf) > 1) || ((ece391_strlen(buf) == 1) && ((buf[0] < '0') || (buf[0] > '2')))) {
+    if ((ece391_strlen(buf) > 2) || ((ece391_strlen(buf) == 2) && ((buf[0] < '0') || (buf[0] > '2')))) {
         ece391_fdputs(1, (uint8_t*)"Wrong Choice!\n");
         return 0;
     } else {
