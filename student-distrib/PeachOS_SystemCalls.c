@@ -413,6 +413,8 @@ int32_t SYS_GETARGS(uint8_t* buf, int32_t nbytes)
     pcb_t * curr_pcb = get_curr_pcb();
     if (nbytes < strlen((const int8_t *)curr_pcb->args))
         return -1;
+    if(strlen((const int8_t *)curr_pcb->args) == 0)
+        return -1;
     strcpy((int8_t *)buf, (const int8_t *)curr_pcb->args);
     return 0;
 }

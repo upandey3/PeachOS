@@ -199,6 +199,7 @@ int32_t
 rtc_open(const uint8_t* filename)
 {
   freq_set(2);                                                                  // set frequency to 2 Hz
+  rtc_flag = 0;
   return 0;                                                                     // and return 0
 }
 
