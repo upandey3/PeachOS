@@ -410,12 +410,12 @@ void keyboard_key_pressed(uint8_t keyboard_value)
 */
 void keyboard_enter_key_pressed()
 {
-    janky_spinlock_flag = 1; // set to 1 if enter key pressed FOR TERMINAL
     if(!buffer_limit_flag)
     {
         keyboard_buffer[keyboard_index] = '\n'; // CHANGEd
         keyboard_index++;
     }
+    janky_spinlock_flag = 1; // set to 1 if enter key pressed FOR TERMINAL
     newline_screen();
     return;
 }
