@@ -25,7 +25,6 @@
 void
 entry (unsigned long magic, unsigned long addr)
 {
-    vid_flag = 0;
 	multiboot_info_t *mbi;
 
 	/* Clear the screen. */
@@ -177,19 +176,14 @@ entry (unsigned long magic, unsigned long addr)
 	paging_init();
 
 	// printf("Enabling Terminal\n");
-    vid_flag +=1;
 	terminal_init();
-
-    terminal_launch(0);
-    terminal_launch(1);
-    terminal_launch(2);
 
 	/* Execute the first program (`shell') ... */
 	//call_sys_halt(2);
 
 	// clear_screen();
 	//testCat();
-	uint8_t buffer[100] = "shell";
+	uint8_t buffer[100] = "testprint";
 	call_sys_execute(buffer);
 
 	/* Spin (nicely, so we don't chew up cycles) */
