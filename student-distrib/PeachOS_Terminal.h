@@ -22,7 +22,7 @@
 
 typedef struct terminal_data
 {
-	uint8_t terminal_buf[TERMINAL_BUFSIZE]; // terminal buffer to read and write away from keyboard_buffer
+		uint8_t terminal_buf[TERMINAL_BUFSIZE]; // terminal buffer to read and write away from keyboard_buffer
     uint8_t terminal_index; //which terminal it is
 
     uint32_t terminal_x_pos; // keeping track of screen position
