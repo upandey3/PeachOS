@@ -25,6 +25,7 @@
 void
 entry (unsigned long magic, unsigned long addr)
 {
+	curr_term = 0;
 	multiboot_info_t *mbi;
 
 	/* Clear the screen. */
@@ -178,13 +179,16 @@ entry (unsigned long magic, unsigned long addr)
 	// printf("Enabling Terminal\n");
 	terminal_init();
 
-	/* Execute the first program (`shell') ... */
-	//call_sys_halt(2);
+	terminal_launch(2);
+	terminal_launch(1);
+	terminal_launch(0);
+	clear_screen();
 
-	// clear_screen();
-	//testCat();
-	uint8_t buffer[100] = "testprint";
-	call_sys_execute(buffer);
+
+	/* Execute the first program (`shell') ... */
+	// uint8_t buffer[100] = "shell";
+	// call_sys_execute(buffer);
+
 
 	/* Spin (nicely, so we don't chew up cycles) */
 	asm volatile(".1: hlt; jmp .1;");

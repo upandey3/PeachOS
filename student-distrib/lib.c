@@ -4,9 +4,10 @@
 
 #include "lib.h"
 
-static int screen_x = 0;
-static int screen_y = 0;
-static char* video_mem = (char *)VIDEO;
+int screen_x = 0;
+int screen_y = 0;
+uint8_t curr_term = 0;
+char* video_mem = (char *)VIDEO;
 
 /*
 * void clear(void);
@@ -21,7 +22,7 @@ clear(void)
     int32_t i;
     for(i=0; i<NUM_ROWS*NUM_COLS; i++) {
         *(uint8_t *)(video_mem + (i << 1)) = ' ';
-        *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB;
+        *(uint8_t *)(video_mem + (i << 1) + 1) = terminal_colors[curr_term];
     }
 }
 
@@ -37,7 +38,7 @@ clear_screen(void)
     int32_t i; // Same as clear(), but we make screen_x and screen_y 0
     for(i=0; i<NUM_ROWS*NUM_COLS; i++) {
         *(uint8_t *)(video_mem + (i << 1)) = ' ';
-        *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB;
+        *(uint8_t *)(video_mem + (i << 1) + 1) = terminal_colors[curr_term];
     }
     screen_y = 0;
     screen_x = 0;
@@ -60,12 +61,12 @@ newline_screen(void)
         for(i = 0; i < (NUM_ROWS - 1) * NUM_COLS; i++)
         {
             *(uint8_t *)(video_mem + (i << 1)) = *(uint8_t *)(video_mem + ((i + NUM_COLS) << 1));
-            *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB; // implementing scrolling
+            *(uint8_t *)(video_mem + (i << 1) + 1) = terminal_colors[curr_term]; // implementing scrolling
         }                                                    // copying over data from previous line
         for(i = (NUM_ROWS-1)*NUM_COLS; i < (NUM_ROWS)*NUM_COLS; i++)
         {
             *(uint8_t *)(video_mem + (i << 1)) = ' ';
-            *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB; // clearing out the last line, becuase we "Scrolled"
+            *(uint8_t *)(video_mem + (i << 1) + 1) = terminal_colors[curr_term]; // clearing out the last line, becuase we "Scrolled"
         }
         screen_x = 0;
         update_cursor();
@@ -94,14 +95,14 @@ backspace_screen(void)
     if(screen_x) // if we screen_x > 0 then we delete horizontally
     {
         screen_x--;
-        *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1) + 1) = ATTRIB;
+        *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1) + 1) = terminal_colors[curr_term];
         *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1)) = ' ';
     }
     else // if screen_x is 0 then we delete verticall, then horizontally again
     {
         screen_y--;
         screen_x = NUM_COLS - 1;
-        *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1) + 1) = ATTRIB;
+        *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1) + 1) = terminal_colors[curr_term];
         *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1)) = ' ';
     }
     update_cursor(); // update cursor becuase screen_x or screen_y was changed
@@ -309,7 +310,7 @@ putc(uint8_t c)
     else
     {
         *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1)) = c;
-        *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1) + 1) = ATTRIB;
+        *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1) + 1) = terminal_colors[curr_term];
         screen_x++;
         if(screen_x == NUM_COLS)
         {

@@ -6,6 +6,7 @@
 #define _LIB_H
 
 #include "types.h"
+#include "PeachOS_Terminal.h"
 
 #define VIDEO 0xB8000
 #define NUM_COLS 80
@@ -15,6 +16,10 @@
 #define LOW_PORT_VGA 0x03D4
 #define LOW_PORT_VGA_2 0x03D5
 
+extern uint8_t curr_term;
+extern char* video_mem;
+extern int screen_x;
+extern int screen_y;
 
 int32_t printf(int8_t *format, ...);
 void putc(uint8_t c);
