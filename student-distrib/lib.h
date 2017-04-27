@@ -6,7 +6,9 @@
 #define _LIB_H
 
 #include "types.h"
+#include "PeachOS_Terminal.h"
 
+#define VIDEO 0xB8000
 #define NUM_COLS 80
 #define NUM_ROWS 25
 #define ATTRIB 0xCF
@@ -14,12 +16,8 @@
 #define LOW_PORT_VGA 0x03D4
 #define LOW_PORT_VGA_2 0x03D5
 
-#define VIDEO 0xB8000
-#define TERMINAL_ONE	  0x8400000 // 132 MB
-#define TERMINAL_TWO	  0x8401000 // 132 MB + 4kB
-#define TERMINAL_THREE	  0x8402000 // 132 MB + 8kB
-
-extern int vid_flag;
+extern uint8_t curr_term;
+extern char* video_mem;
 extern int screen_x;
 extern int screen_y;
 

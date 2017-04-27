@@ -1,0 +1,245 @@
+March 9th, 2017 (START DATE)
+-> Pulled code, and made branches
+
+March 10th, 2017
+-> Setup GDT
+    > Worked on by AK.
+
+March 11th, 2017
+-> Setup PIC
+    > Ran into problem with send_eoi, did not take into account
+      closing IRQ2 when closing an IRQ from slave
+    > Worked on by ACP.
+    > Fixed by ACP.
+
+March 12th, 2017
+-> Setup Keyboard, RTC
+    > Keyboard worked fine on the first try
+    > Using data register in a while loop, might cause trouble later on
+    > RTC Worked on by AK.
+    > Keyboard Worked on by ACP.
+
+-> Finalized GDT, IDT
+-> Working on Paging
+    > Difficulty getting started, many problems with memory mapping
+    > Getting tons of errors from not initializing paging properly
+    > Paging Worked on by SS.
+
+March 15th, 2017
+-> Finalized GDT, IDT, RTC, Keyboard
+    > Working properly
+    > Keyboard changed, checking if control register set to get the
+      scancode
+    > Learned to change color of background and text
+    > Keyboard Fixed by SS, ACP.
+
+-> Paging finally finished
+    > Paging finally worked.
+
+March 20th, 2017
+-> Keyboard ran into trouble when using CTRL
+    > Problems with CLI and STI.
+        > Had to use them more carefully, and make sure they were
+          actually being used. Re-did Keybaord parts to make sure
+          every CLI had a closing STI
+    > Fixed by ACP
+
+March 22nd, 2017
+-> Started Terminal
+    > Confused about terminal_open and terminal_close
+    > Using printf in terminal_write. This might cause trouble in
+      the future, since not using nbytes.
+    > Worked on by ACP
+
+-> Working on FileSystems
+    > Trouble starting this part, not much info gathered at this point
+    > Worked on by SS
+
+March 26th, 2017
+-> Finalized Terminal, Keyboard, and RTC
+    > Terminal ran into problems with read and write.
+        > Terminal read wouldn't get inputs correctly from the
+          keyboard because terminal_read would be waiting for an
+          input from keyboard, while keyboard hasn't read anything.
+          Fixed it by using a volatile flag that waits till keyboard
+            has inputs in it(ends by \n), then in terminal_read we
+            copy it into the passed in buffer.
+        > Had to re-do Keyboard helper functions again, because the
+          flags needed for terminal_read need to be set and checked.
+          Basically, re-did the enter, backspace, input_handler, and
+          keyboard_key_pressed functions.
+        > Fixes: Setting the correct flags as soon as terminal_read
+          is used, when terminal_read is ending set the correct flags.
+          Made the janky_spinlock_flag's type volataile, its set when
+          enter key is hit on keyboard.
+        > Fixed by ACP
+
+-> Working on FileSystems
+
+March 27th, 2017
+-> Finalized Terminal, and Keyboard with a working cursor
+    > Adding the cursor changed a bit of lib.c
+-> Finalized FileSystems
+    > Worked for Reading the directory, Read the File
+        > Confusion with what exactly was OFFSET, so files were read
+          but always from the start, not from a specific offset.
+-> Minor Issue with RTC, and Keyboard
+    > RTC wouldn't close properly, turns out we had a problem with
+      gitlab, so we RTC had an old piece code while everything else
+      was updated.
+      Fixed RTC, Keyboard in a 1-2 minute after the checkpoint. RTC
+      was a very simple fix, had to change a variable. Keyboard, had
+      to change the name of a flag(had too many flags to keep track off)
+    > RTC Fixed by AK.
+    > keyboard, Terminal Fixed by ACP.
+
+April 8th, 2017
+-> Finalized Terminal
+    > Terminal_write working with putc and nbytes.
+    > Fixed by ACP
+
+-> Re-Did FileSystems
+    > Deleted the old code, and re-did the whole fileSystem.
+      Changed many parts, and re-worked the whole understanding
+      of FileSystem we had.
+    > Worked on by the whole team
+
+April 8th-12th, 2017
+-> Finalized FileSystems, Keyboard, Terminal, RTC, IDT
+    > Had minor issues left in FileSystem that we removed easily.
+    > Keyboard, and Terminal were working, but just made sure they
+      still working with the new FileSystem.(mostly checking CTRL
+      Functions.)
+    > RTC(minor problem during the CheckPoint Fixed.)
+    > The whole team worked on FileSystems, and tested it as well.
+
+April 11th, 2017
+-> Added sysCall_handler
+    > Worked on by AK.
+-> Started System Calls
+    > Open, Close, Read, Write, GetArgs Done
+    > Worked on by ACP, UP.
+
+April 12th, 2017
+-> Added SystemCall_Test files to check the sysCall_Handler
+    > sysCall_Handler worked perfectly, and got us to the actual
+      system calls.
+      Checked Open, Close, Read, Write, GetArgs. They Worked(syscall
+      handler actually printed the correct statement).
+    > Tested by ACP
+
+April 13th, 2017
+-> Started working on EXECUTE
+    > Gathered info on what execute does
+    > Got the input and output working for EXECUTE
+        > Able to parse the command, check for executable, save the
+          the file_name. Also getting the argument, and saving the
+          argument into the PCB.
+        > Need to work on IRET.
+            > No clue what IRET does
+    > Worked on by ACP.
+
+April 14th, 2017
+-> Working on IRET in EXECUTE
+    > Found diagrams of how the stack looks like before and after
+      IRET.
+    > Confused about the order of pushing, found conflicting diagrams
+    > Reading the intel manual for it. Found a good diagram for IRET
+      However, not understanding where the ESP and EIP come from.
+    > ESP turns out to be the EIP stored in each executable file.
+    > EIP is the address of USER STACK.
+
+April 15th, 2017
+-> EXECUTE finally worked
+    > Had many problems with figuring out what values had to be Pushed
+      for EIP, and ESP.
+    > Paging was done incorrectly, Had to make a new paging function
+      To map the virtual address and physical address of where the
+      programs were running.
+    > Fixed by ACP
+
+-> Started working on HALT
+    > Understood what HALT does, tried implementing it but ran into
+      page faults.
+        > Turns out, We were accessing the wrong page when returning
+          back to a running shell(program).
+    > Worked on by ACP
+
+April 16th, 2017
+-> Working on HALT
+    > Used GDB to track down the problem, and turns out we didn't
+      use the correct ESP, and EBP to jumpback.
+        > The ESP and EBP we used were getting overwritten when
+           making the jump back to a program.
+           Fixed the problem by implementing an in-line assembly
+            code to save ESP, EBP, so we would jump back to the pro-
+            per stack once we do the jmp from HALT to EXECUTE.
+        > Once that worked, We implemented 6 processes, and it worked.
+-> Finalized HALT, and EXECUTE
+    >Fixed by ACP.
+
+April 17th, 2017
+-> All SYSTEM CALLS test and working.
+    > Tested by all teammates
+
+April 18th, 2017
+-> Checkpoint 3, had a hidden warming somewhere, used sudo make -sB to
+   find it and fixed the warning. It was because we used int8_t instead
+   of uint8_t.
+   > Fixed by AK
+
+April 19th, 2017
+-> Working on PIT, and Scheduling
+    > Worked on by AK
+
+April 21st, 2017
+-> Working on PIT, Scheduling, and SYS_VIDMAP
+    > Understood what VIDMAP does by looking at fish.c
+
+April 22nd, 2017
+-> Implemented SYS_VIDMAP, but ran into problems
+    > It was implemented properly, however, paging was wrong
+        > Simple fix, we made a new page table however, we were
+          paging with size 4MB, so as soon as changed to 4KB. It
+
+          Worked perfectly.
+    > Worked on and Fixed by UP, SS, ACP
+
+April 23rd, 2017
+-> Tested All SYSTEM CALLS
+    > Had no trouble running 6 processes, 6 shells.
+    > No Trouble with HALT, exits, and running FISH.
+    > Tested by all teammates.
+
+April 24th, 2017
+-> Got points off for cat rtc, and grep.
+    > We didn't even know grep took in arguments.
+        > Simple fix, took 1-2 mins to fix grep and RTC.
+          For GREP, added a condition in SYS_GETARGS to check
+          if argument is greater size of 0.
+          For RTC, -----------------
+    > RTC Fixed by AK.
+    > GREP Fixed by ACP.
+
+-> Started working on Multiple-Terminal
+    > Understood it, and started off by using terminal_init to
+      set x and y, set video_mem to a certain location. and clear
+      the screen and set the color.
+    > Implemented terminal_launch, worked as thought(similair to
+      terminal_init).
+    > terminal_switch caused problems. When ran terminal_switch, it
+      worked fine but when switching between the terminals, the
+      bits and pieces of screen from the previous terminal would show
+      on the new terminal.
+    > Worked on and Fixed by ACP.
+
+April 25th, 2017
+    > Fixing terminal_switch: Used GDB to track down what was happening
+      Had a hunch that kept using the same VA to map to VIDEO. GDB
+      cleared that up, so mapped the terminal_video_mem of each terminal
+      to different locations. Terminal_0 video_mem is at 132MB+4KB,
+      Terminal_1 video_mem is at 132MB+8KB, Terminal_3 is at 132+12KB.
+      This is so we can map 132MB(VIRTUAL) to 0xB8000(PHYSICAL). Then
+      we mapped terminal_video_mem(PHYSICAL) to 132MB(VIRTUAL). This
+      Displayed the screen properly.
+      > Fixed by ACP.

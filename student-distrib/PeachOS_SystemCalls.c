@@ -432,7 +432,7 @@ int32_t SYS_VIDMAP(uint8_t ** screen_start)
         return -1;
 
     map_video_page((uint32_t)_132MB, (uint32_t)VIDEO, OFFSET0);
-    *screen_start = (uint8_t*)_132MB;
+    *screen_start = (uint8_t*)(_132MB);
     return _132MB;
 }
 

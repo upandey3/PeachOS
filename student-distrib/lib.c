@@ -3,13 +3,11 @@
  */
 
 #include "lib.h"
-#include "PeachOS_Terminal.h"
 
 int screen_x = 0;
 int screen_y = 0;
-char* video_mem[4] = {(char *)VIDEO, (char *)TERMINAL_ONE, (char *)TERMINAL_TWO, (char *)TERMINAL_THREE};
-
-int vid_flag = 0x0;
+uint8_t curr_term = 0;
+char* video_mem = (char *)VIDEO;
 
 /*
 * void clear(void);
@@ -17,13 +15,14 @@ int vid_flag = 0x0;
 *   Return Value: none
 *	Function: Clears video memory
 */
+
 void
 clear(void)
 {
     int32_t i;
     for(i=0; i<NUM_ROWS*NUM_COLS; i++) {
-        *(uint8_t *)(terminal[vid_flag].terminal_video_mem + (i << 1)) = ' ';
-        *(uint8_t *)(terminal[vid_flag].terminal_video_mem + (i << 1) + 1) = terminal_colors[vid_flag];
+        *(uint8_t *)(video_mem + (i << 1)) = ' ';
+        *(uint8_t *)(video_mem + (i << 1) + 1) = terminal_colors[curr_term];
     }
 }
 
@@ -36,13 +35,13 @@ clear(void)
 void
 clear_screen(void)
 {
-    int32_t i; // Same as clear(), but we make terminal[vid_flag].terminal_x_pos and terminal[vid_flag].terminal_y_pos 0
+    int32_t i; // Same as clear(), but we make screen_x and screen_y 0
     for(i=0; i<NUM_ROWS*NUM_COLS; i++) {
-        *(uint8_t *)(terminal[vid_flag].terminal_video_mem + (i << 1)) = ' ';
-        *(uint8_t *)(terminal[vid_flag].terminal_video_mem + (i << 1) + 1) = terminal_colors[vid_flag];
+        *(uint8_t *)(video_mem + (i << 1)) = ' ';
+        *(uint8_t *)(video_mem + (i << 1) + 1) = terminal_colors[curr_term];
     }
-    terminal[vid_flag].terminal_y_pos = 0;
-    terminal[vid_flag].terminal_x_pos = 0;
+    screen_y = 0;
+    screen_x = 0;
     update_cursor();
 }
 
@@ -56,26 +55,26 @@ void
 newline_screen(void)
 {
     update_cursor();
-    if(terminal[vid_flag].terminal_y_pos == NUM_ROWS -1) //if we are at the bottom edge then we "scroll"
+    if(screen_y == NUM_ROWS -1) //if we are at the bottom edge then we "scroll"
     {
         int32_t i; // if we are at the right most edge, we goto a new line
         for(i = 0; i < (NUM_ROWS - 1) * NUM_COLS; i++)
         {
-            *(uint8_t *)(terminal[vid_flag].terminal_video_mem + (i << 1)) = *(uint8_t *)(terminal[vid_flag].terminal_video_mem+ ((i + NUM_COLS) << 1));
-            *(uint8_t *)(terminal[vid_flag].terminal_video_mem + (i << 1) + 1) = terminal_colors[vid_flag]; // implementing scrolling
+            *(uint8_t *)(video_mem + (i << 1)) = *(uint8_t *)(video_mem + ((i + NUM_COLS) << 1));
+            *(uint8_t *)(video_mem + (i << 1) + 1) = terminal_colors[curr_term]; // implementing scrolling
         }                                                    // copying over data from previous line
         for(i = (NUM_ROWS-1)*NUM_COLS; i < (NUM_ROWS)*NUM_COLS; i++)
         {
-            *(uint8_t *)(terminal[vid_flag].terminal_video_mem + (i << 1)) = ' ';
-            *(uint8_t *)(terminal[vid_flag].terminal_video_mem + (i << 1) + 1) = terminal_colors[vid_flag]; // clearing out the last line, becuase we "Scrolled"
+            *(uint8_t *)(video_mem + (i << 1)) = ' ';
+            *(uint8_t *)(video_mem + (i << 1) + 1) = terminal_colors[curr_term]; // clearing out the last line, becuase we "Scrolled"
         }
-        terminal[vid_flag].terminal_x_pos = 0;
+        screen_x = 0;
         update_cursor();
     }
     else
     {
-        terminal[vid_flag].terminal_x_pos = 0; // if we arent at the bottom edge then just increment the screen x and screen y
-        terminal[vid_flag].terminal_y_pos++;
+        screen_x = 0; // if we arent at the bottom edge then just increment the screen x and screen y
+        screen_y++;
         update_cursor();
     }
     update_cursor();
@@ -91,20 +90,20 @@ void
 backspace_screen(void)
 {
     update_cursor();
-    if((terminal[vid_flag].terminal_x_pos == 0 && terminal[vid_flag].terminal_y_pos == 0)) // if we are at the beginning of the screen dont do anything
+    if((screen_x == 0 && screen_y == 0)) // if we are at the beginning of the screen dont do anything
         return;
-    if(terminal[vid_flag].terminal_x_pos) // if we terminal[vid_flag].terminal_x_pos > 0 then we delete horizontally
+    if(screen_x) // if we screen_x > 0 then we delete horizontally
     {
-        terminal[vid_flag].terminal_x_pos--;
-        *(uint8_t *)(terminal[vid_flag].terminal_video_mem + (((terminal[vid_flag].terminal_y_pos * NUM_COLS) + terminal[vid_flag].terminal_x_pos) << 1) + 1) = terminal_colors[vid_flag];
-        *(uint8_t *)(terminal[vid_flag].terminal_video_mem + (((terminal[vid_flag].terminal_y_pos * NUM_COLS) + terminal[vid_flag].terminal_x_pos) << 1)) = ' ';
+        screen_x--;
+        *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1) + 1) = terminal_colors[curr_term];
+        *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1)) = ' ';
     }
     else // if screen_x is 0 then we delete verticall, then horizontally again
     {
-        terminal[vid_flag].terminal_y_pos--;
-        terminal[vid_flag].terminal_x_pos = NUM_COLS - 1;
-        *(uint8_t *)(terminal[vid_flag].terminal_video_mem + (((terminal[vid_flag].terminal_y_pos * NUM_COLS) + terminal[vid_flag].terminal_x_pos) << 1) + 1) = terminal_colors[vid_flag];
-        *(uint8_t *)(terminal[vid_flag].terminal_video_mem + (((terminal[vid_flag].terminal_y_pos * NUM_COLS) + terminal[vid_flag].terminal_x_pos) << 1)) = ' ';
+        screen_y--;
+        screen_x = NUM_COLS - 1;
+        *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1) + 1) = terminal_colors[curr_term];
+        *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1)) = ' ';
     }
     update_cursor(); // update cursor becuase screen_x or screen_y was changed
 }
@@ -120,7 +119,7 @@ backspace_screen(void)
 void
 update_cursor(void)
 {
-   uint32_t position = (terminal[vid_flag].terminal_y_pos * NUM_COLS) + terminal[vid_flag].terminal_x_pos; // get the position of where you are on the screen
+   uint32_t position = (screen_y * NUM_COLS) + screen_x; // get the position of where you are on the screen
 
    // cursor LOW port to vga INDEX register
    outb(0x0F, LOW_PORT_VGA);
@@ -310,15 +309,15 @@ putc(uint8_t c)
     }
     else
     {
-        *(uint8_t *)(terminal[vid_flag].terminal_video_mem + ((NUM_COLS*terminal[vid_flag].terminal_y_pos + terminal[vid_flag].terminal_x_pos) << 1)) = c;
-        *(uint8_t *)(terminal[vid_flag].terminal_video_mem + ((NUM_COLS*terminal[vid_flag].terminal_y_pos + terminal[vid_flag].terminal_x_pos) << 1) + 1) = terminal_colors[vid_flag];
-        terminal[vid_flag].terminal_x_pos++;
-        if(terminal[vid_flag].terminal_x_pos == NUM_COLS)
+        *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1)) = c;
+        *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1) + 1) = terminal_colors[curr_term];
+        screen_x++;
+        if(screen_x == NUM_COLS)
         {
             newline_screen();
             update_cursor();
         }
-        terminal[vid_flag].terminal_y_pos = (terminal[vid_flag].terminal_y_pos + (terminal[vid_flag].terminal_x_pos / NUM_COLS)) % NUM_ROWS;
+        screen_y = (screen_y + (screen_x / NUM_COLS)) % NUM_ROWS;
     }
     update_cursor();
 }
@@ -674,20 +673,3 @@ strncpy(int8_t* dest, const int8_t* src, uint32_t n)
 
 	return dest;
 }
-
-/*
-* void test_interrupts(void)
-*   Inputs: void
-*   Return Value: void
-*	Function: increments video memory. To be used to test rtc
-*/
-
-// void
-// test_interrupts(void)
-// {
-// 	uint32_t i;
-// 	for (i = 0; i < NUM_ROWS * NUM_COLS; i++)
-//     {
-// 		video_mem[i<<1] = '1';
-// 	}
-// }

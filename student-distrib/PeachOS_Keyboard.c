@@ -173,6 +173,7 @@ void keyboard_input_handler()
 
         /* SKELTON CODE IN-CASE WE DO SOME SPECIAL FUNCTIONS */
         case F1_PRESSED:
+            if(ALT_PRESSED_1)
                 terminal_switch(0);
             break;
         case F2_PRESSED:
