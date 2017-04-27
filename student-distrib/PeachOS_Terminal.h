@@ -37,8 +37,6 @@ extern uint8_t terminal_colors[MAX_TERMINAL]; // contains colors for terminal 1,
 extern uint32_t terminal_vid_mem[MAX_TERMINAL];
 extern uint8_t terminal_state[MAX_TERMINAL];
 
-
-
 extern void terminal_init(void);
 void terminal_launch(uint8_t terminal_num);
 void terminal_switch(uint8_t terminal_num);

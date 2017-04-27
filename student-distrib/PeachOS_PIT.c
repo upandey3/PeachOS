@@ -1,4 +1,5 @@
 #include "PeachOS_PIT.h"
+#include "PeachOS_Terminal.h"
 
 /*
 *   void pit_init();

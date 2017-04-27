@@ -33,5 +33,6 @@ extern void keyboard_handler();
 */
 extern void rtc_handler();
 extern void sysCall_handler();
+extern void pit_handler();
 
 #endif

@@ -15,6 +15,7 @@
 #include "PeachOS_Terminal.h"
 #include "PeachOS_FileSys.h"
 #include "PeachOS_SystemCall_Test.h"
+#include "PeachOS_PIT.h"
 
 /* Macros. */
 /* Check if the bit BIT in FLAGS is set. */
@@ -179,11 +180,13 @@ entry (unsigned long magic, unsigned long addr)
 	// printf("Enabling Terminal\n");
 	terminal_init();
 
-	terminal_launch(2);
-	terminal_launch(1);
-	terminal_launch(0);
-	clear_screen();
+	pit_init();
 
+	// terminal_launch(2);
+	// terminal_launch(1);
+	terminal_launch(0);
+
+	clear_screen();
 
 	/* Execute the first program (`shell') ... */
 	// uint8_t buffer[100] = "shell";

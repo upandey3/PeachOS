@@ -159,13 +159,13 @@ void init_set_page (uint32_t va, uint32_t pa)
 ****************************************************************/
 void map_video_page(uint32_t virtualAddr, uint32_t physicalAddr, uint32_t page)
 {
-	// init page directory entry
+	  // init page directory entry
     page_directory[virtualAddr/_4MB].PTBA = (((uint32_t)video_page_table)>>12);
     page_directory[virtualAddr/_4MB].present = 1;
     page_directory[virtualAddr/_4MB].read_write = 1;
     page_directory[virtualAddr/_4MB].user_supervisor = 1;
 
-	video_page_table[page].present = 1;
+	  video_page_table[page].present = 1;
     video_page_table[page].read_write = 1;
     video_page_table[page].user_supervisor = 1;
     video_page_table[page].PBA = physicalAddr>>12;

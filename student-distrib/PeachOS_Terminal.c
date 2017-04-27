@@ -30,7 +30,7 @@ void terminal_init()
 
 
         map_video_page(_132MB, _132MB + ((i+1) * _4KB), i+1); // mapping at 132MB + 4KB, 132MB + 8 KB, 132MB + 12KB, LEAVING 132MB OUT ON PURPOSE
-        terminal[i].terminal_video_mem = (_132MB + ((i+1) * _4KB)); // assigning the physical address to the terminal_video_mem
+        terminal[i].terminal_video_mem = (uint32_t)(_132MB + ((i+1) * _4KB)); // assigning the physical address to the terminal_video_mem
 
         for (j = 0; j < NUM_ROWS*NUM_COLS; j++)
         {
