@@ -14,6 +14,7 @@ void run_scheduler();
 /*
 This function returns the next terminal(process associated) to be
 scheduled next for the scheduler
+*/
 int32_t get_next_terminal_running();
 //Determines which terminal is being executed by the scheduler
 extern volatile int32_t tasking_running_terminal;
