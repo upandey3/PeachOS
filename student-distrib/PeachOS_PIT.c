@@ -71,7 +71,7 @@ pit_input_handler()
     cli();
 
     //Call the scheduler
-    run_scheduler();
+    // run_scheduler();
 
     sti();
 }
