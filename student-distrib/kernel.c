@@ -26,7 +26,7 @@
 void
 entry (unsigned long magic, unsigned long addr)
 {
-	curr_term = 0;
+	displayed_term = 0;
 	multiboot_info_t *mbi;
 
 	/* Clear the screen. */
@@ -172,7 +172,6 @@ entry (unsigned long magic, unsigned long addr)
 
 	/* Intialize the keyboard */
 	// printf("Enabling Keyboard\n");
-	keyboard_init();
 
 	// printf("Enabling Paging\n");
 	paging_init();
@@ -180,18 +179,15 @@ entry (unsigned long magic, unsigned long addr)
 	// printf("Enabling Terminal\n");
 	terminal_init();
 
-	pit_init();
-
-	// terminal_launch(2);
-	// terminal_launch(1);
-	terminal_launch(0);
+	keyboard_init();
 
 	clear_screen();
 
-	/* Execute the first program (`shell') ... */
-	// uint8_t buffer[100] = "shell";
-	// call_sys_execute(buffer);
+	pit_init();
 
+	/* Execute the first program (`shell') ... */
+	uint8_t buffer[100] = "shell";
+	SYS_EXECUTE(buffer);
 
 	/* Spin (nicely, so we don't chew up cycles) */
 	asm volatile(".1: hlt; jmp .1;");

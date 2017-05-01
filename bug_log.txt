@@ -4,6 +4,8 @@ March 9th, 2017 (START DATE)
 March 10th, 2017
 -> Setup GDT
     > Worked on by AK.
+    > Ran into issues about determining the size of the GDT in the GDT struct
+    > Fixed by AK.
 
 March 11th, 2017
 -> Setup PIC
@@ -17,9 +19,14 @@ March 12th, 2017
     > Keyboard worked fine on the first try
     > Using data register in a while loop, might cause trouble later on
     > RTC Worked on by AK.
+    > RTC worked fine for checkpoint 2 on first try
     > Keyboard Worked on by ACP.
 
 -> Finalized GDT, IDT
+    > IDT Worked on by AK.
+    > Ran into bugs relating to using the incorrect interrupt gates
+    > Fixed by AK.
+
 -> Working on Paging
     > Difficulty getting started, many problems with memory mapping
     > Getting tons of errors from not initializing paging properly
@@ -83,13 +90,14 @@ March 27th, 2017
     > Worked for Reading the directory, Read the File
         > Confusion with what exactly was OFFSET, so files were read
           but always from the start, not from a specific offset.
+        > Worked on by SS.
 -> Minor Issue with RTC, and Keyboard
     > RTC wouldn't close properly, turns out we had a problem with
       gitlab, so we RTC had an old piece code while everything else
       was updated.
       Fixed RTC, Keyboard in a 1-2 minute after the checkpoint. RTC
       was a very simple fix, had to change a variable. Keyboard, had
-      to change the name of a flag(had too many flags to keep track off)
+      to change the name of a flag (had too many flags to keep track off)
     > RTC Fixed by AK.
     > keyboard, Terminal Fixed by ACP.
 
@@ -102,7 +110,9 @@ April 8th, 2017
     > Deleted the old code, and re-did the whole fileSystem.
       Changed many parts, and re-worked the whole understanding
       of FileSystem we had.
-    > Worked on by the whole team
+    > Created more organized structures for parsing and
+      setting up the read-only file system.
+    > Worked on by the whole team: AK, ACP, UP and SS.
 
 April 8th-12th, 2017
 -> Finalized FileSystems, Keyboard, Terminal, RTC, IDT
@@ -110,12 +120,16 @@ April 8th-12th, 2017
     > Keyboard, and Terminal were working, but just made sure they
       still working with the new FileSystem.(mostly checking CTRL
       Functions.)
-    > RTC(minor problem during the CheckPoint Fixed.)
+    > RTC (minor problem during the CheckPoint Fixed.)
     > The whole team worked on FileSystems, and tested it as well.
 
 April 11th, 2017
--> Added sysCall_handler
+-> Assembly Wrapper - sysCall_handler
     > Worked on by AK.
+    > Ran into issues pertaining to stack not being set up correctly for calls
+      to System Call functions themselves
+    > Fixed by AK.
+
 -> Started System Calls
     > Open, Close, Read, Write, GetArgs Done
     > Worked on by ACP, UP.
@@ -131,6 +145,8 @@ April 12th, 2017
 April 13th, 2017
 -> Started working on EXECUTE
     > Gathered info on what execute does
+    > Set up paging helper functions for EXECUTE
+    > Worked on by AK and UP.
     > Got the input and output working for EXECUTE
         > Able to parse the command, check for executable, save the
           the file_name. Also getting the argument, and saving the
@@ -176,21 +192,24 @@ April 16th, 2017
             per stack once we do the jmp from HALT to EXECUTE.
         > Once that worked, We implemented 6 processes, and it worked.
 -> Finalized HALT, and EXECUTE
-    >Fixed by ACP.
+    > Fixed by the whole team: AK, ACP, UP and SS
 
 April 17th, 2017
--> All SYSTEM CALLS test and working.
+-> All SYSTEM CALLS tested and working.
     > Tested by all teammates
 
 April 18th, 2017
 -> Checkpoint 3, had a hidden warming somewhere, used sudo make -sB to
-   find it and fixed the warning. It was because we used int8_t instead
-   of uint8_t.
-   > Fixed by AK
+   find it and fixed the warning. It was because we had an end-of-new-line
+   error.
+   > Fixed by AK.
 
 April 19th, 2017
 -> Working on PIT, and Scheduling
-    > Worked on by AK
+    > PIT driver completely implemented: initialization, set frequency and
+      interrupt handler functions set up
+    > PIT driver worked correctly on first attempt
+    > Worked on by AK.
 
 April 21st, 2017
 -> Working on PIT, Scheduling, and SYS_VIDMAP
@@ -209,7 +228,7 @@ April 23rd, 2017
 -> Tested All SYSTEM CALLS
     > Had no trouble running 6 processes, 6 shells.
     > No Trouble with HALT, exits, and running FISH.
-    > Tested by all teammates.
+    > Tested by all teammates: AK, ACP, UP and SS.
 
 April 24th, 2017
 -> Got points off for cat rtc, and grep.
@@ -217,7 +236,8 @@ April 24th, 2017
         > Simple fix, took 1-2 mins to fix grep and RTC.
           For GREP, added a condition in SYS_GETARGS to check
           if argument is greater size of 0.
-          For RTC, -----------------
+        > 'cat rtc' issue was fixed by setting a flag within RTC_Open
+          such that a delay is caused when RTC_Read is called in 'cat'
     > RTC Fixed by AK.
     > GREP Fixed by ACP.
 
@@ -225,7 +245,7 @@ April 24th, 2017
     > Understood it, and started off by using terminal_init to
       set x and y, set video_mem to a certain location. and clear
       the screen and set the color.
-    > Implemented terminal_launch, worked as thought(similair to
+    > Implemented terminal_launch, worked as thought (similar to
       terminal_init).
     > terminal_switch caused problems. When ran terminal_switch, it
       worked fine but when switching between the terminals, the
@@ -242,4 +262,4 @@ April 25th, 2017
       This is so we can map 132MB(VIRTUAL) to 0xB8000(PHYSICAL). Then
       we mapped terminal_video_mem(PHYSICAL) to 132MB(VIRTUAL). This
       Displayed the screen properly.
-      > Fixed by ACP.
+      > Fixed by ACP, AK and UP.

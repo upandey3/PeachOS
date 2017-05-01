@@ -4,9 +4,10 @@
 
 #include "lib.h"
 
+
 int screen_x = 0;
 int screen_y = 0;
-uint8_t curr_term = 0;
+uint8_t displayed_term = 0;
 char* video_mem = (char *)VIDEO;
 
 /*
@@ -22,7 +23,7 @@ clear(void)
     int32_t i;
     for(i=0; i<NUM_ROWS*NUM_COLS; i++) {
         *(uint8_t *)(video_mem + (i << 1)) = ' ';
-        *(uint8_t *)(video_mem + (i << 1) + 1) = terminal_colors[curr_term];
+        *(uint8_t *)(video_mem + (i << 1) + 1) = terminal_colors[displayed_term];
     }
 }
 
@@ -38,7 +39,7 @@ clear_screen(void)
     int32_t i; // Same as clear(), but we make screen_x and screen_y 0
     for(i=0; i<NUM_ROWS*NUM_COLS; i++) {
         *(uint8_t *)(video_mem + (i << 1)) = ' ';
-        *(uint8_t *)(video_mem + (i << 1) + 1) = terminal_colors[curr_term];
+        *(uint8_t *)(video_mem + (i << 1) + 1) = terminal_colors[displayed_term];
     }
     screen_y = 0;
     screen_x = 0;
@@ -61,12 +62,12 @@ newline_screen(void)
         for(i = 0; i < (NUM_ROWS - 1) * NUM_COLS; i++)
         {
             *(uint8_t *)(video_mem + (i << 1)) = *(uint8_t *)(video_mem + ((i + NUM_COLS) << 1));
-            *(uint8_t *)(video_mem + (i << 1) + 1) = terminal_colors[curr_term]; // implementing scrolling
+            *(uint8_t *)(video_mem + (i << 1) + 1) = terminal_colors[displayed_term]; // implementing scrolling
         }                                                    // copying over data from previous line
         for(i = (NUM_ROWS-1)*NUM_COLS; i < (NUM_ROWS)*NUM_COLS; i++)
         {
             *(uint8_t *)(video_mem + (i << 1)) = ' ';
-            *(uint8_t *)(video_mem + (i << 1) + 1) = terminal_colors[curr_term]; // clearing out the last line, becuase we "Scrolled"
+            *(uint8_t *)(video_mem + (i << 1) + 1) = terminal_colors[displayed_term]; // clearing out the last line, becuase we "Scrolled"
         }
         screen_x = 0;
         update_cursor();
@@ -95,14 +96,14 @@ backspace_screen(void)
     if(screen_x) // if we screen_x > 0 then we delete horizontally
     {
         screen_x--;
-        *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1) + 1) = terminal_colors[curr_term];
+        *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1) + 1) = terminal_colors[displayed_term];
         *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1)) = ' ';
     }
     else // if screen_x is 0 then we delete verticall, then horizontally again
     {
         screen_y--;
         screen_x = NUM_COLS - 1;
-        *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1) + 1) = terminal_colors[curr_term];
+        *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1) + 1) = terminal_colors[displayed_term];
         *(uint8_t *)(video_mem + (((screen_y * NUM_COLS) + screen_x) << 1)) = ' ';
     }
     update_cursor(); // update cursor becuase screen_x or screen_y was changed
@@ -310,7 +311,7 @@ putc(uint8_t c)
     else
     {
         *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1)) = c;
-        *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1) + 1) = terminal_colors[curr_term];
+        *(uint8_t *)(video_mem + ((NUM_COLS*screen_y + screen_x) << 1) + 1) = terminal_colors[displayed_term];
         screen_x++;
         if(screen_x == NUM_COLS)
         {
@@ -320,6 +321,101 @@ putc(uint8_t c)
         screen_y = (screen_y + (screen_x / NUM_COLS)) % NUM_ROWS;
     }
     update_cursor();
+}
+
+/*
+* void terminal_putc(uint8_t character);
+*   Inputs: uint_8* c = character to print
+*   Return Value: void
+*	Function: Output a character to the physical memory of tasking_running_terminal
+*/
+void
+terminal_putc(uint8_t character)
+{
+    // if newline or tab we need to scroll down
+    if(character == '\n' || character == '\r')
+    {
+        term_newline();
+    }
+    else // put the character in the appropiate location, and change the color
+    {
+        *(uint8_t *)(terminal[tasking_running_terminal].terminal_video_mem + ((NUM_COLS*terminal[tasking_running_terminal].terminal_y_pos + terminal[tasking_running_terminal].terminal_x_pos) << 1)) = character;
+        *(uint8_t *)(terminal[tasking_running_terminal].terminal_video_mem + ((NUM_COLS*screen_y + screen_x) << 1) + 1) = terminal_colors[tasking_running_terminal];
+        terminal_screen_reset(terminal[tasking_running_terminal].terminal_x_pos + 1, terminal[tasking_running_terminal].terminal_y_pos);
+    }
+}
+
+
+/*
+* void terminal_screen_reset(uint32_t term_x, uint32_t term_y)
+*   Inputs: uint32_t term_x, uint32_t term_y = change the screen here
+*   Return Value: void
+*	Function: scrolls_up if the values for term_x or term_y are too big
+*/
+void
+terminal_screen_reset(uint32_t term_x, uint32_t term_y)
+{
+    // if term_x is appropiate then assign it value
+	if (term_x < NUM_COLS)
+		terminal[tasking_running_terminal].terminal_x_pos = term_x;
+	else // if not then goto newline
+    {
+		term_newline();
+		return;
+	}
+    // if term_y is appropiate then assgin it value
+	if (term_y < NUM_ROWS)
+		terminal[tasking_running_terminal].terminal_y_pos = term_y;
+	else // if not we need to scroll_up possibly
+    {
+		term_newline_screen();
+		terminal[tasking_running_terminal].terminal_y_pos = NUM_ROWS - 1;
+	}
+}
+
+/*
+* void term_newline(void)
+*   Inputs: none
+*   Return Value: void
+*	Function: scrolls to new_line
+*/
+void term_newline(void)
+{
+	terminal_screen_reset(ZERO, terminal[tasking_running_terminal].terminal_y_pos + 1);
+}
+
+/*
+* void term_newline_screen()
+*   Inputs: none
+*   Return Value: void
+*	Function: scrolls to new_line
+*/
+void term_newline_screen()
+{
+	int32_t term_x;
+	int32_t term_y;
+
+	int32_t pos_old;
+	int32_t pos_new;
+
+	// incrementing term_x and term_y
+	for (term_y = 0; term_y < NUM_ROWS-1; term_y++)
+    {   // save the old_pos and get new_pos for it
+		for (term_x = 0; term_x < NUM_COLS; term_x++)
+        { // assign the character depending on the new_pos
+			pos_old = NUM_COLS*(term_y+1) + term_x;
+			pos_new = NUM_COLS*term_y + term_x;
+			*(uint8_t *)(terminal[tasking_running_terminal].terminal_video_mem + (pos_new << 1)) = *(uint8_t *)(terminal[tasking_running_terminal].terminal_video_mem + (pos_old << 1));
+		}
+	}
+
+	// once done, we need to clear out the bottom of the screen
+	for (term_x = 0; term_x < NUM_COLS; term_x++)
+    { // incrementing the x value in the bottom , and then clearning it out
+		pos_new = NUM_COLS*(NUM_ROWS-1) + term_x;
+		*(uint8_t *)(terminal[tasking_running_terminal].terminal_video_mem + (pos_new << 1)) = ' ';
+	}
+	terminal_screen_reset(ZERO, terminal[tasking_running_terminal].terminal_y_pos);
 }
 
 /*

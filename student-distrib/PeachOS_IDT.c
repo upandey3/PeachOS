@@ -45,6 +45,8 @@ INTERRUPT_HANDLER (FLOATING_POINT_ERROR, "FLOATING POINT ERROR");
 INTERRUPT_HANDLER (ALIGNMENT_CHECK, "ALIGNMENT CHECK");
 INTERRUPT_HANDLER (MACHINE_CHECK, "MACHINE CHECK");
 INTERRUPT_HANDLER (SIMD_FLOATING_POINT_EXCEPTION, "SIMD FLOATING POINT EXCEPTION");
+INTERRUPT_HANDLER (UNDEFINED_INTERRUPT, "Interrupt not defined by our OS!");
+INTERRUPT_HANDLER (SYSTEM_CALL, "System Call Generated!");
 
 /* Set to 0 1 1 0 0 (call gate) simply allows privilege transfer from lower to higher */
 
@@ -117,6 +119,7 @@ void initialize_idt () {
   SET_IDT_ENTRY (idt[RTC_INT], rtc_handler);
   SET_IDT_ENTRY (idt[KBD_INT], keyboard_handler);
   SET_IDT_ENTRY (idt[PIT_INT], pit_handler);
+
 
   /* load the idt_desc_ptr using lidt in order to load the IDT to memory */
   lidt(idt_desc_ptr);

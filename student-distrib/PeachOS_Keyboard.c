@@ -80,6 +80,7 @@ void keyboard_init()
     keyboard_index = 0;
     janky_spinlock_flag = 0;
     buffer_limit_flag = 0;
+    keyboard_buffer = (uint8_t *)terminal[displayed_term].terminal_buf;
 
     return;
 }
@@ -174,15 +175,27 @@ void keyboard_input_handler()
         /* SKELTON CODE IN-CASE WE DO SOME SPECIAL FUNCTIONS */
         case F1_PRESSED:
             if(ALT_PRESSED_1)
+            {
+                sti();
+                send_eoi(KEYBOARD_IRQ);
                 terminal_switch(0);
+            }
             break;
         case F2_PRESSED:
             if(ALT_PRESSED_1)
+            {
+                sti();
+                send_eoi(KEYBOARD_IRQ);
                 terminal_switch(1);
+            }
             break;
         case F3_PRESSED:
             if(ALT_PRESSED_1)
+            {
+                sti();
+                send_eoi(KEYBOARD_IRQ);
                 terminal_switch(2);
+            }
             break;
         default:
             keyboard_key_pressed(scan_input);
@@ -233,13 +246,10 @@ void keyboard_key_pressed(uint8_t keyboard_value)
         if(keyboard_ascii == 'l')
         {
             clear_screen();
-            empty_buffer(keyboard_buffer); // ADDED
         }
         if(keyboard_ascii == 's')
         {
             clear_screen();
-            printf("Starting hello...\n");
-            SYS_EXECUTE((uint8_t *)"cat hello");
         }
         if(keyboard_ascii == '1')
         {
@@ -259,7 +269,6 @@ void keyboard_key_pressed(uint8_t keyboard_value)
         if(keyboard_ascii == '3')
         {
             clear_screen();
-
             // Read File by Index
             if (fs_ctrl_3 < 0 || fs_ctrl_3 > 16)
               fs_ctrl_3 = 0;
@@ -271,7 +280,6 @@ void keyboard_key_pressed(uint8_t keyboard_value)
             sti();
             rtc_test_flag = 1;
             clear_screen();
-            //set_xy(0,0);
             rtc_test();
         }
         if(keyboard_ascii == '5')
@@ -280,7 +288,6 @@ void keyboard_key_pressed(uint8_t keyboard_value)
             freq_test = 2;
             rtc_close(0);
             clear_screen();
-            //set_xy(0,0);
         }
 
         return;
@@ -298,10 +305,6 @@ void keyboard_key_pressed(uint8_t keyboard_value)
         {
             if(terminal_flag_keyboard)
             {
-                // keyboard_buffer[keyboard_index] = keyboard_ascii;
-                // if(keyboard_index > LIMIT)
-                //     buffer_limit_flag = 1;
-                // keyboard_index++;
                 if(keyboard_index > LIMIT-1)
                     buffer_limit_flag = 1;
                 if(buffer_limit_flag)

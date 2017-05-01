@@ -4,6 +4,7 @@
 #include "types.h"
 #include "lib.h"
 #include "i8259.h"
+#include "PeachOS_Scheduling.h"
 
 #define PIT_IRQ 0
 

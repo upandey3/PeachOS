@@ -53,25 +53,28 @@ int32_t SYS_HALT(uint8_t status)
     while (index < MAX_OPEN_FILES)
         SYS_CLOSE(index++);
 
-    pcb_t * current_pcb = get_curr_pcb();
-    pcb_t * parent_pcb = (pcb_t*)current_pcb->parent_pcb;
+    pcb_t * curr_PCB = get_pcb_by_process(terminal[tasking_running_terminal].pid);
+    pcb_t * parent_PCB = get_pcb_by_process(curr_PCB->parent_process_id);
 
-    sti();
+    terminal[tasking_running_terminal].pid = curr_PCB->parent_process_id;// Assign the process id for the terminal to be -1
 
-    available_processes[(uint8_t)current_pcb->process_id] = AVAILABLE;
-    if (current_pcb->process_id == parent_pcb->process_id || current_pcb->process_id == NUM_ZERO)
+    available_processes[(uint8_t)curr_PCB->process_id] = AVAILABLE;
+    if (curr_PCB->process_id == parent_PCB->process_id || curr_PCB->process_id == NUM_ZERO || curr_PCB->parent_process_id == -1)
     {
         clear_screen();
+        terminal[tasking_running_terminal].pid = -1;
         SYS_EXECUTE(shell);
     }
 
     /* If we are trying to halt the last process in the terminal,
       then execute shell again
       SOURCE: https://piazza.com/class/iwy7snh02335on?cid=911 */
-	tss.esp0 = current_pcb->parent_tss;
+	tss.esp0 = curr_PCB->parent_tss;
     tss.ss0 = KERNEL_DS;
 
-    init_set_page(_128MB, _8MB + (parent_pcb->process_id * _4MB)); // Needs to change
+    init_set_page(_128MB, _8MB + (parent_PCB->process_id * _4MB)); // Needs to change
+
+    sti();
 
     asm volatile(
         "movl %0, %%ebp;"
@@ -79,7 +82,7 @@ int32_t SYS_HALT(uint8_t status)
         "movl %2, %%eax;"
         "jmp ret_from_halt;"
         :
-        : "r"(parent_pcb->base_pointer), "r"(parent_pcb->stack_pointer), "r"((uint32_t)status)
+        : "r"(parent_PCB->base_pointer), "r"(parent_PCB->stack_pointer), "r"((uint32_t)status)
         : "esp", "ebp", "eax"
         );
     return 0;
@@ -95,6 +98,7 @@ int32_t SYS_HALT(uint8_t status)
  */
 int32_t SYS_EXECUTE(const uint8_t* command)
 {
+    cli();
     uint8_t file_name[FILENAMESIZE] = {'\0'};
     uint32_t file_name_length = NUM_ZERO; // was 1 before
     uint8_t arg_buffer[ARGSIZE] = {'\0'};
@@ -118,17 +122,27 @@ int32_t SYS_EXECUTE(const uint8_t* command)
       printf("Maximum number of processes reached, invalid command! \n");
       return -1; // CANT DO ANYTHING, MAX PROCESS REACHED
     }
-    pcb_t * parent_PCB = get_curr_pcb();
+
+    pcb_t * parent_PCB;
+
+    if (terminal[displayed_term].pid == -1)
+    {
+        parent_PCB = (pcb_t *)(_8MB - _8KB);
+        tasking_running_terminal = displayed_term;
+    }
+    else
+        parent_PCB = get_pcb_by_process(terminal[displayed_term].pid);
+
+    tasking_running_terminal = displayed_term;
     pcb_t * child_PCB = pcb_fork(process_num, parent_PCB);
     strcpy((int8_t*)child_PCB->args, (int8_t*)arg_buffer); //copy arguments to PCB
+
+    terminal[displayed_term].pid = process_num;// Assign the process id for the terminal
 
     /* Get the starting instruction stored in bytes 24-27 of the executable file*/
     read_data(dir_entry.inode, ELF_EIP_START, (uint8_t *)&elf_eip, ELF_ADDR_SIZE);
 
-    if (child_PCB->process_id == NUM_ZERO) // Process for shell is at 8 MB
-        init_page(_128MB, _8MB);    // Set up page directory
-    else                            // Other processes are at 12 MB
-        init_page(_128MB, _8MB + (child_PCB->process_id * _4MB));  // Needs to change
+    init_page(_128MB, _8MB + (child_PCB->process_id * _4MB));  // / Process for shell is at 8 MB + offset
 
     /* Loading the program, by copying the file to the virtual address */
     uint8_t * program_img_va = (uint8_t*)PROGRAM_IMG_ADDR;
@@ -138,9 +152,6 @@ int32_t SYS_EXECUTE(const uint8_t* command)
     /* Setting up the stack for halt*/
     asm volatile("        \n\
         movl %%ebp, %0    \n\
-        pushl %%ebp       \n\
-        pushl $0x00       \n\
-        pushl $0x00       \n\
         movl %%esp, %1    \n\
         "
         : "=r"(child_PCB->parent_base_pointer), "=r"(child_PCB->parent_stack_pointer)
@@ -148,48 +159,21 @@ int32_t SYS_EXECUTE(const uint8_t* command)
         : "cc"
         );
     /* Updating parent stack and base pointers */
-    parent_PCB->stack_pointer = child_PCB->parent_stack_pointer;
-    parent_PCB->base_pointer = child_PCB->parent_base_pointer;
+    if (child_PCB->parent_process_id != -1)
+    {
+        parent_PCB->stack_pointer = child_PCB->parent_stack_pointer;
+        parent_PCB->base_pointer = child_PCB->parent_base_pointer;
+    }
     /* Setting up TSS */
     child_PCB->parent_tss = tss.esp0;
     //tss.esp0 is given by parent process pcb - 4
     tss.esp0 = (_8MB - (_8KB * (child_PCB->process_id + 1))) - PCB_PTR_BYTES;
     tss.ss0 = KERNEL_DS; // always  the same
 
+    // User program stack pointer
     uint32_t elf_eip_var = ((elf_eip & HIGHER_10_BITS_MASK) + (_4MB)) - PCB_PTR_BYTES;
 
-    /* What I Did
-     * 1. CLI, block interrupts
-     * 2. Clear EAX, USER_DS -> EAX, moved user data segment into EAX
-     * 3.4. Moved USER_DS into DS, the lower 16 bits only
-     * Source for 3: https://littleosbook.github.io/, 11.3 ENTERING USER MODE
-     * 5. Pushed all the flags on the stack(KERNEL)
-     * 6.7. Popped teh flags and put them in EAX, after clearing it out
-     * 8. Or'd EAX with 0010 0000 0000m to turn IF flag ON for user, so USER can have interrrupts occuring
-     *      -> Sets up EFLAGS(EAX)
-     * Source for 6: http://www.c-jump.com/CIS77/ASM/Instructions/I77_0070_eflags_bits.htm
-     *  9.10. Clear out EDX, Move'd USER_CS into EDX
-     *      -> Sets up CS(EDX)
-     * Source for 10: ULK Section 10.3 subsection: ENTERING THE SYSTEM CALL
-     * 11.12. Clear out ECX, Move'd argument 1(%0) into ECX.
-     *      virtual_addr is 4 bytes long, and holds the 24-27 bytes
-     *      info from EXECUTABLE FILe
-     *      -> Sets up EIP(ECX)
-     * Source for 12: https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
-     * 13. Push'd SS(same as DS)
-     * Source for 13: https://web.archive.org/web/20160326062442/http://jamesmolloy.co.uk/tutorial_html/10.-User%20Mode.html
-     * 14. Push'd SS
-     * 15. Push'd ESP(value stored in EBP)
-     * 16. Push'd EFLAGS(EAX)
-     * 17. Push'd CS(EDX)
-     * 18. Push'd EIP(ECX)
-     * 19. Push'd Error Code
-     *
-     * General Sources:
-     *      http://x86.renejeschke.de/html/file_module_x86_id_145.html
-     *      http://www.intel.com/Assets/en_US/PDF/manual/253665.pdf INTEL MANUAL 6.4
-     *      https://en.wikipedia.org/wiki/Inline_assembler
-    */
+    sti();
     asm volatile ("                 \n\
         cli                         \n\
         pushl $0x2B                 \n\
@@ -541,13 +525,14 @@ pcb_t * get_pcb_by_process(uint8_t process_num)
      child_pcb->open_files[7].flags = AVAILABLE;
      child_pcb->process_id = process_num;
      child_pcb->parent_pcb = (uint32_t)parent_pcb;
-     child_pcb->base_pointer = (uint32_t)(child_pcb + _8KB - 4);
-     child_pcb->stack_pointer = child_pcb->base_pointer;
+     child_pcb->base_pointer = (uint32_t)((_8MB - (_8KB * (child_pcb->process_id + 1))) - PCB_PTR_BYTES);
+     child_pcb->stack_pointer = (uint32_t)((_8MB - (_8KB * (child_pcb->process_id + 1))) - PCB_PTR_BYTES);
 
-     if(parent_pcb == (pcb_t *)(_8MB - _8KB))//Base process
+     if(parent_pcb == (pcb_t *)(_8MB - _8KB) || term_init_flag)//Base process
      {
          child_pcb->parent_process_id = -1;
          parent_pcb->process_id = -1;
+         term_init_flag = 0;
      }
      else
          child_pcb->parent_process_id = parent_pcb->process_id;

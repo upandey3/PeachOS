@@ -4,6 +4,7 @@
 
 #include "types.h"
 #include "x86_desc.h"
+#include "PeachOS_Scheduling.h"
 
 #define MAX_OPEN_FILES 8
 #define MAX_FILENAME_SIZE 32
@@ -59,19 +60,6 @@ typedef struct {
     int32_t (*fd_close)(int32_t fd);
 } jump_table_ops;
 
-// /* stdin, file operation table */
-// jump_table_ops stdin_table;
-// /* stdout, file operation table */
-// jump_table_ops stdout_table;
-// /* rtc, file operation table */
-// jump_table_ops rtc_table;
-// /* file, file operation table */
-// jump_table_ops file_table;
-// /* directory, file operation table */
-// jump_table_ops directory_table;
-// /* closed file, file operation table */
-// jump_table_ops closed_table;
-
 /* File Descriptor Struct */
 typedef struct {
     jump_table_ops file_jumptable;
@@ -114,10 +102,10 @@ int32_t SYS_SIGRETURN(void);
 uint32_t parse_command(const uint8_t* command, uint8_t* file_name, uint8_t* arg_buffer);
 uint32_t check_executable(uint8_t* file_name, uint32_t* dir_ptr);
 pcb_t *get_curr_pcb();
-int32_t get_available_process_num();
+extern int32_t get_available_process_num();
 uint32_t set_available_process_num();
 int32_t dummy_function();
-pcb_t *pcb_fork();
-pcb_t * get_curr_pcb_process(uint8_t process_num);
-
+pcb_t * pcb_fork(uint32_t process_num, pcb_t * parent_pcb);
+pcb_t * get_pcb_by_process(uint8_t process_num);
+extern uint8_t available_processes[MAX_PROCESSES];
 #endif

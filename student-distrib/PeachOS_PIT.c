@@ -1,5 +1,4 @@
 #include "PeachOS_PIT.h"
-#include "PeachOS_Terminal.h"
 
 /*
 *   void pit_init();
@@ -19,7 +18,7 @@ pit_init()
   /* 42614 is used here as the divider since it results in a frequency
      of about 28 Hz which translates to about 35.7 ms */
 
-  uint16_t frequency = 42614;
+  uint16_t frequency = /*65535;*/ 42614;
   timer_set(frequency);
 
   enable_irq(PIT_IRQ);
@@ -40,9 +39,10 @@ pit_init()
 void
 timer_set (uint16_t freq)
 {
-  uint16_t frequency = (PIT_DEFAULT_FREQ)/(freq);
-  uint8_t low_bits = (frequency & LOW_MASK);
-  uint8_t high_bits = ((frequency >> BIT_SHIFT) & (LOW_MASK));
+  // uint16_t frequency = (PIT_DEFAULT_FREQ)/(freq);
+
+  uint8_t low_bits = (freq & LOW_MASK);
+  uint8_t high_bits = ((freq >> BIT_SHIFT) & (LOW_MASK));
 
   outb(low_bits, PIT_CH0_IOPORT);
   outb(high_bits, PIT_CH0_IOPORT);
@@ -61,15 +61,17 @@ timer_set (uint16_t freq)
 *   before unmasking interrupts again
 *   Source: http://www.brokenthorn.com/Resources/OSDevPit.html
 */
+// int is = 150;
 void
 pit_input_handler()
 {
-  cli();
 
-  send_eoi(PIT_IRQ);
+    send_eoi(PIT_IRQ);
 
-  // "Hello" used to test, replace this with a call to schedule a process
-  // printf("Hello! \n");
+    cli();
 
-  sti();
+    //Call the scheduler
+    run_scheduler();
+
+    sti();
 }

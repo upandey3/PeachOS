@@ -17,7 +17,7 @@
 #define LIMIT 128
 
 /* BUFFER TO HOLD VALUES */
-uint8_t keyboard_buffer[LIMIT];
+uint8_t* keyboard_buffer;
 uint32_t keyboard_index; //index for the array
 
 volatile uint32_t janky_spinlock_flag; // janky_spinlock for waiting to get the kebaord input
