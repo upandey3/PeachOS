@@ -146,7 +146,7 @@ int32_t SYS_EXECUTE(const uint8_t* command)
 
     /* Loading the program, by copying the file to the virtual address */
     uint8_t * program_img_va = (uint8_t*)PROGRAM_IMG_ADDR;
-    uint32_t filelength = inodes[dir_entry.inode].filelength;;
+    uint32_t filelength = inodes[dir_entry.inode].filelength;
     read_data(dir_entry.inode, OFFSET0, program_img_va, filelength);
 
     /* Setting up the stack for halt*/
